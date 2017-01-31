@@ -1,0 +1,3 @@
+awscli==1.11.44
+cliff==2.3.0
+-e git+https://github.com/associatedpress/datakit-core.git#egg=datakit-core

@@ -18,12 +18,10 @@ datakit-data plugin
      :alt: Updates
 
 
-A datakit plugin to manage data assets on AWS S3.
-
+A datakit_ plugin to manage data assets on AWS S3.
 
 * Free software: ISC license
 * Documentation: https://datakit-data.readthedocs.io.
-
 
 
 Features
@@ -32,20 +30,20 @@ Features
 * TODO
 
 Installation
-------------
+============
 
 In order to use this plugin with a system-wide install of datakit_::
 
   $ sudo pip install datakit-data
 
 Usage
------
+=====
 
 * TODO
 
 
 Credits
----------
+=======
 
 This package was created with Cookiecutter_ and the `associatedpress/cookiecutter-datakit-plugin`_ 
 project template (a modified version of the most excellent `audreyr/cookiecutter-pypackage`_).
