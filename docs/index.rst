@@ -8,7 +8,8 @@ Contents:
 
    readme
    contributing
-   authorshistory
+   authors
+   history
 
 Indices and tables
 ==================
