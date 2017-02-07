@@ -50,7 +50,7 @@ setup(
     zip_safe=False,
     keywords='datakit-data',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 2 - Pre-Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: ISC License (ISCL)',
