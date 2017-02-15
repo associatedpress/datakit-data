@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
+import os
 
 from cliff.command import Command
 from datakit import CommandHelpers
-from datakit.utils import mkdir_p, write_json
+from datakit.utils import mkdir_p, write_json, read_json
 
 from .project_mixin import ProjectMixin
 
@@ -28,11 +29,17 @@ class Init(ProjectMixin, CommandHelpers, Command):
         self.create_project_config()
 
     def create_project_config(self):
-        try:
-            plugin_configs = self.configs
-        except FileNotFoundError:
-            plugin_configs = {}
-        to_write = self.default_configs.copy()
-        to_write.update(plugin_configs)
-        write_json(self.project_config_path, to_write)
-        return to_write
+        """Create project config if they don't already exist.
+
+        Plugin-level configs, if configured, will override project defaults.
+
+        """
+        if not os.path.exists(self.project_config_path):
+
+            try:
+                plugin_configs = self.configs
+            except FileNotFoundError:
+                plugin_configs = {}
+            to_write = self.default_configs.copy()
+            to_write.update(plugin_configs)
+            write_json(self.project_config_path, to_write)

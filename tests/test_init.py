@@ -18,11 +18,6 @@ def fake_project(tmpdir):
     return os.path.join(tmpdir.strpath, 'fake-project')
 
 
-@pytest.fixture
-def get_fake_project_configs(fake_project):
-    return read_json(os.path.join(fake_project, 'config/datakit-data.json'))
-
-
 @pytest.fixture(autouse=True)
 def setup(dkit_home, fake_project, monkeypatch, tmpdir):
     mkdir_p(dkit_home)
@@ -37,6 +32,14 @@ def create_plugin_config(dkit_home, project_name, content):
     config_file = os.path.join(plugin_dir, 'config.json')
     write_json(config_file, content)
     return content
+
+
+def create_project_config(project_root, contents={}):
+    config_dir = os.path.join(project_root, 'config')
+    mkdir_p(config_dir)
+    project_config = os.path.join(config_dir, 'datakit-data.json')
+    write_json(project_config, contents)
+
 
 def dir_contents(path):
     dirs_and_files = []
@@ -88,8 +91,17 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     cmd.run(parsed_args)
     assert cmd.project_configs == plugin_configs
 
-# TODO: def test_missing_plugin_configs:
 
-# TODO: def test_project_configs_initializes_files:
-
-# TODO: def test_preexisting_project_configs_honored:
+def test_preexisting_project_configs_honored(fake_project):
+    """
+    Subsequent initializations should not overwrite a pre-existing project config.
+    """
+    # Mimic a prior initialization by pre-creating the config file
+    create_project_config(fake_project, {'aws_user_profile': 'user2'})
+    cmd = Init(None, None, cmd_name='data:init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    proj_configs = cmd.project_configs
+    assert proj_configs['aws_user_profile'] == 'user2'
+    assert 's3_bucket' not in proj_configs
+    assert 's3_path' not in proj_configs
