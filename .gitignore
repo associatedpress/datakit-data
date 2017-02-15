@@ -54,15 +54,6 @@ coverage.xml
 
 # Sphinx documentation
 docs/_build/
-docs/
-!docs/Makefile
-!docs/authors.rst
-!docs/conf.py
-!docs/contributing.rst
-!docs/history.rst
-!docs/index.rst
-!docs/make.bat
-!docs/readme.rst
 
 # Example Cliff command
 tests/test_greet.py
