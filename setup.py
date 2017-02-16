@@ -15,13 +15,12 @@ from setuptools import setup
 requirements = [
     'awscli',
     'cliff',
-    'cookiecutter>=1.5.0',
     'datakit-core>=0.2.0',
 ]
 
 test_requirements = [
     'pytest',
-    'pytest-cookies',
+    'pytest-catchall',
 ]
 
 setup(
