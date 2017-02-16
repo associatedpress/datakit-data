@@ -22,7 +22,7 @@ class Init(ProjectMixin, CommandHelpers, Command):
     """
 
     def take_action(self, parsed_args):
-        print("Initializing project for S3 data integration...")
+        self.log.info("Initializing project for S3 data integration...")
         dirs_to_create = ['data', 'config']
         [mkdir_p(directory) for directory in dirs_to_create]
         open('data/.gitkeep', 'w').close()

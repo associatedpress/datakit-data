@@ -10,7 +10,7 @@ from conftest import (
 from datakit_data import Init
 
 
-def test_project_buildout(fake_project, monkeypatch, tmpdir):
+def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     """
     Init should auto-generate directories and project-level config file.
     """
@@ -21,6 +21,7 @@ def test_project_buildout(fake_project, monkeypatch, tmpdir):
     assert 'data' in contents
     assert 'config' in contents
     assert os.path.exists(os.path.join(fake_project, 'data/.gitkeep'))
+    assert 'Initializing project' in caplog.text
 
     # Test default project configs
     assert cmd.configs['aws_user_profile'] == 'default'
