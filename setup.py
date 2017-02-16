@@ -16,7 +16,7 @@ requirements = [
     'awscli',
     'cliff',
     'cookiecutter>=1.5.0',
-    'datakit-core',
+    'datakit-core>=0.2.0',
 ]
 
 test_requirements = [
@@ -40,7 +40,7 @@ setup(
     include_package_data=True,
     entry_points={
         'datakit.plugins': [
-            #'data:setup= datakit_data:Setup',
+            'data:init= datakit_data:Init',
             #'data:push= datakit_data:Push',
             #'data:pull= datakit_data:Pull',
         ]
