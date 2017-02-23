@@ -19,8 +19,9 @@ requirements = [
 ]
 
 test_requirements = [
-    'pytest',
-    'pytest-catchall',
+    'pytest'
+    'pytest-catchlog'
+    'pytest-mock==1.5.0',
 ]
 
 setup(
@@ -40,7 +41,7 @@ setup(
     entry_points={
         'datakit.plugins': [
             'data:init= datakit_data:Init',
-            #'data:push= datakit_data:Push',
+            'data:push= datakit_data:Push',
             #'data:pull= datakit_data:Pull',
         ]
     },
