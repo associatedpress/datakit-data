@@ -18,12 +18,12 @@ class S3:
     # Public
 
     def push(self, data_dir, s3_path='', extra_flags=[]):
-        payload = self.prepare_command_meta(data_dir, s3_path, extra_flags)
+        payload = self.prepare_command_meta('push', data_dir, s3_path, extra_flags)
         self.run(payload['cmd'], payload['project_dir'])
 
-    # TODO: def pull(self, data_dir, s3_path='', extra_flags=[]):
-        # payload = self.prepare_command(data_dir, s3_path, extra_flags)
-        # self.run(payload['cmd'], payload['project_dir'])
+    def pull(self, data_dir, s3_path='', extra_flags=[]):
+        payload = self.prepare_command_meta('pull', data_dir, s3_path, extra_flags)
+        self.run(payload['cmd'], payload['project_dir'])
 
     # Private
 
@@ -35,12 +35,15 @@ class S3:
             bits = line.split('\r')
             print(bits[1])
 
-    def prepare_command_meta(self, data_dir, s3_path, extra_flags):
-        target_url = self.build_s3_url(s3_path)
+    def prepare_command_meta(self, action, data_dir, s3_path, extra_flags):
+        s3_url = self.build_s3_url(s3_path)
         project_dir = os.path.dirname(os.path.abspath(data_dir))
-        cmd = self.build_s3_sync_cmd(data_dir, target_url, extra_flags)
+        if action == 'push':
+            cmd = self.build_s3_sync_cmd(data_dir, s3_url, extra_flags)
+        elif action == 'pull':
+            cmd = self.build_s3_sync_cmd(s3_url, data_dir, extra_flags)
         return {
-            'target_url': target_url,
+            's3_url': s3_url,
             'project_dir': project_dir,
             'cmd': cmd,
         }

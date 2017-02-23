@@ -60,3 +60,21 @@ def test_push(mocker):
         expected_cmd,
         stderr=subprocess.STDOUT
     )
+
+
+def test_pull(mocker):
+    mock_subprocess = mocker.patch(
+        'datakit_data.s3.subprocess.check_output',
+        autospec=True,
+        return_value=b'Some gunk\rupload: foo\nMore gunk\rupload: bar\n'
+    )
+    s3 = S3('ap', 'foo.org')
+    s3.pull('data/', '2017/fake-project')
+    expected_cmd = [
+        'aws', 's3', 'sync', '--profile', 'ap',
+        's3://foo.org/2017/fake-project/', 'data/',
+    ]
+    mock_subprocess.assert_called_once_with(
+        expected_cmd,
+        stderr=subprocess.STDOUT
+    )
