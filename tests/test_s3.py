@@ -1,5 +1,4 @@
-#import subprocess
-#from unittest import mock
+import subprocess
 
 import pytest
 
@@ -19,14 +18,14 @@ def test_s3_url_construction(s3_path):
 
 def test_command_construction():
     s3_url = 's3://foo.org/2017/fake-project/'
-    api = S3(aws_user_profile='ap', s3_bucket='foo.org')
+    s3 = S3(aws_user_profile='ap', s3_bucket='foo.org')
     expected_cmd = ['aws', 's3', 'sync', '--profile', 'ap', 'data/', s3_url]
-    actual_cmd = api.build_s3_sync_cmd('data/', s3_url)
+    actual_cmd = s3.build_s3_sync_cmd('data/', s3_url)
     assert expected_cmd == actual_cmd
 
 
 @pytest.mark.parametrize("extra_flags", [
-    ("--dry-run"),
+    ("--dry-run",),
     ("--dry-run", "--delete"),
 ])
 def test_command_with_flags(extra_flags):
@@ -34,7 +33,30 @@ def test_command_with_flags(extra_flags):
     aws command line flags are passed through unchanged.
     """
     s3_url = 's3://foo.org/2017/fake-project/'
-    api = S3(aws_user_profile='ap', s3_bucket='foo.org')
-    expected_cmd = ['aws', 's3', 'sync', '--profile', 'ap', 'data/', s3_url].extend(extra_flags)
-    actual_cmd = api.build_s3_sync_cmd('data/', s3_url, extra_flags)
+    s3 = S3(aws_user_profile='ap', s3_bucket='foo.org')
+    expected_cmd = [
+        'aws', 's3', 'sync',
+        '--profile', 'ap',
+        'data/', s3_url
+    ]
+    expected_cmd.extend(extra_flags)
+    actual_cmd = s3.build_s3_sync_cmd('data/', s3_url, extra_flags)
     assert expected_cmd == actual_cmd
+
+
+def test_push(mocker):
+    mock_subprocess = mocker.patch(
+        'datakit_data.s3.subprocess.check_output',
+        autospec=True,
+        return_value=b'Some gunk\rupload: foo\nMore gunk\rupload: bar\n'
+    )
+    s3 = S3('ap', 'foo.org')
+    s3.push('data/', '2017/fake-project')
+    expected_cmd = [
+        'aws', 's3', 'sync', '--profile', 'ap',
+        'data/', 's3://foo.org/2017/fake-project/'
+    ]
+    mock_subprocess.assert_called_once_with(
+        expected_cmd,
+        stderr=subprocess.STDOUT
+    )

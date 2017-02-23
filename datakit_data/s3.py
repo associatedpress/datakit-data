@@ -17,17 +17,13 @@ class S3:
 
     # Public
 
-    def push(self, data_dir, s3_path='', opts={}):
-        target_url = self.build_s3_url(s3_path)
-        project_dir = os.path.dirname(os.path.abspath(data_dir))
-        cmd = self.build_s3_sync_cmd(data_dir, target_url, opts)
-        self.run(cmd, project_dir)
+    def push(self, data_dir, s3_path='', extra_flags=[]):
+        payload = self.prepare_command_meta(data_dir, s3_path, extra_flags)
+        self.run(payload['cmd'], payload['project_dir'])
 
-    # TODO: def pull(self, data_dir, s3_path='', opts={}):
-        # target_url = self.build_s3_url(s3_path)
-        # project_dir = os.path.dirname(os.path.abspath(data_dir))
-        # cmd = self.build_s3_sync_cmd(target_url, data_dir, opts)
-        # self.run(cmd, project_dir)
+    # TODO: def pull(self, data_dir, s3_path='', extra_flags=[]):
+        # payload = self.prepare_command(data_dir, s3_path, extra_flags)
+        # self.run(payload['cmd'], payload['project_dir'])
 
     # Private
 
@@ -39,6 +35,16 @@ class S3:
             bits = line.split('\r')
             print(bits[1])
 
+    def prepare_command_meta(self, data_dir, s3_path, extra_flags):
+        target_url = self.build_s3_url(s3_path)
+        project_dir = os.path.dirname(os.path.abspath(data_dir))
+        cmd = self.build_s3_sync_cmd(data_dir, target_url, extra_flags)
+        return {
+            'target_url': target_url,
+            'project_dir': project_dir,
+            'cmd': cmd,
+        }
+
     def build_s3_sync_cmd(self, source, target, extra_flags=[]):
         cmd = [
             'aws', 's3', 'sync',
@@ -46,10 +52,8 @@ class S3:
             source,
             target,
         ]
-        # TODO: Use shlex.split here to parse/sanitize inputs
-        # and then extend the cmd list with the parsed inputs
-        #if extra_flags:
-        #    cmd += " {}".format(extra_flags.strip())
+        if extra_flags:
+            cmd.extend(extra_flags)
         return cmd
 
     def build_s3_url(self, s3_path=None):
