@@ -4,4 +4,5 @@ __author__ = """Serdar Tumgoren"""
 __email__ = 'stumgoren@ap.org'
 __version__ = '0.1.0'
 
-from .init import Init
+from .commands.init import Init
+from .commands.push import Push

@@ -5,7 +5,7 @@ from cliff.command import Command
 from datakit import CommandHelpers
 from datakit.utils import mkdir_p, write_json
 
-from .project_mixin import ProjectMixin
+from ..project_mixin import ProjectMixin
 
 
 class Init(ProjectMixin, CommandHelpers, Command):
