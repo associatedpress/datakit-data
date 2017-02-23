@@ -18,11 +18,13 @@ class S3:
     # Public
 
     def push(self, data_dir, s3_path='', extra_flags=[]):
-        payload = self.prepare_command_meta('push', data_dir, s3_path, extra_flags)
+        args = ('push', data_dir, s3_path, extra_flags)
+        payload = self.prepare_command_meta(*args)
         self.run(payload['cmd'], payload['project_dir'])
 
     def pull(self, data_dir, s3_path='', extra_flags=[]):
-        payload = self.prepare_command_meta('pull', data_dir, s3_path, extra_flags)
+        args = ('pull', data_dir, s3_path, extra_flags)
+        payload = self.prepare_command_meta(*args)
         self.run(payload['cmd'], payload['project_dir'])
 
     # Private
