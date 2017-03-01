@@ -26,6 +26,7 @@ def test_s3_instantiation(mocker):
     )
     cmd = Push(None, None, 'data:push')
     parsed_args = mock.Mock()
+    parsed_args.args = []
     cmd.run(parsed_args)
     # S3 instantiated with project-level configs for 
     # user profile and bucket
@@ -42,8 +43,30 @@ def test_push_invocation(mocker):
     )
     cmd = Push(None, None, 'data:push')
     parsed_args = mock.Mock()
+    parsed_args.args = []
     cmd.run(parsed_args)
-    push_mock.assert_any_call(mock.ANY, 'data/', '2017/fake-project')
+    push_mock.assert_any_call(
+        mock.ANY,
+        'data/',
+        '2017/fake-project',
+        extra_flags=[]
+    )
 
-# TODO: def test_extra_cli_flags
+
+def test_boolean_cli_flags(mocker):
+    push_mock = mocker.patch(
+        'datakit_data.commands.push.S3.push',
+        autospec=True,
+    )
+    parsed_args = mock.Mock()
+    parsed_args.args = ['dry-run']
+    cmd = Push(None, None, 'data:push')
+    cmd.run(parsed_args)
+    push_mock.assert_any_call(
+        mock.ANY,
+        'data/',
+        '2017/fake-project',
+        extra_flags=['--dry-run']
+    )
+
 # TODO: Test captured test output is logged at this layer
