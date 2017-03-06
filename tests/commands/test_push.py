@@ -68,5 +68,3 @@ def test_boolean_cli_flags(mocker):
         '2017/fake-project',
         extra_flags=['--dry-run']
     )
-
-# TODO: Test captured test output is logged at this layer
