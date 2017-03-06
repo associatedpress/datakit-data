@@ -1,5 +1,11 @@
 import os
+import logging
+from logging import NullHandler
 import subprocess
+
+
+logger = logging.getLogger(__name__)
+logger.addHandler(NullHandler())
 
 
 class S3:
@@ -30,12 +36,15 @@ class S3:
     # Private
 
     def run(self, cmd, project_dir):
-        # self.log.info("EXECUTING: #{cmd}")
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        output_lines = output.decode('utf-8').strip('\n').split('\n')
-        for line in output_lines:
-            bits = line.split('\r')
-            print(bits[1])
+        logger.info("EXECUTING: {}".format(' '.join(cmd)))
+        try:
+            output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+            logger.info(output.decode('utf-8'))
+        except subprocess.CalledProcessError as e:
+            msg = "\n*** Error ***\n{}\n".format(
+                e.output.decode('utf-8').strip()
+            )
+            logger.info(msg)
 
     def prepare_command_meta(self, action, data_dir, s3_path, extra_flags):
         s3_url = self.build_s3_url(s3_path)

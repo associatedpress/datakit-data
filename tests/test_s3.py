@@ -1,4 +1,5 @@
 import subprocess
+from unittest import mock
 
 import pytest
 
@@ -25,8 +26,8 @@ def test_command_construction():
 
 
 @pytest.mark.parametrize("extra_flags", [
-    ("--dry-run",),
-    ("--dry-run", "--delete"),
+    ("--dryrun",),
+    ("--dryrun", "--delete"),
 ])
 def test_command_with_flags(extra_flags):
     """
@@ -78,3 +79,21 @@ def test_pull(mocker):
         expected_cmd,
         stderr=subprocess.STDOUT
     )
+
+
+def test_logging(caplog, mocker):
+    mocker.patch(
+        'datakit_data.s3.subprocess.check_output',
+        autospec=True,
+        return_value=b'Some gunk\rupload: foo\nMore gunk\rupload: bar\n'
+    )
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    s3 = S3('ap', 'foo.org')
+    s3.push('data/', '2017/fake-project')
+
+    command_msg = "EXECUTING: aws s3 sync --profile ap " + \
+        "data/ s3://foo.org/2017/fake-project/"
+    assert command_msg in caplog.text
+    assert 'upload: foo' in caplog.text
+    assert 'upload: bar' in caplog.text
