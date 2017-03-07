@@ -8,7 +8,6 @@ from conftest import (
     dir_contents
 )
 
-from datakit.utils import read_json
 from datakit_data import Init
 
 
