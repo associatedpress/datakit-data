@@ -20,7 +20,7 @@ def test_s3_instantiation(mocker):
     """
     S3 wrapper instantiated properly
     """
-    s3_mock  = mocker.patch(
+    s3_mock = mocker.patch(
         'datakit_data.commands.push.S3',
         autospec=True,
     )
@@ -28,7 +28,7 @@ def test_s3_instantiation(mocker):
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
-    # S3 instantiated with project-level configs for 
+    # S3 instantiated with project-level configs for
     # user profile and bucket
     s3_mock.assert_called_once_with('ap', 'foo.org')
 

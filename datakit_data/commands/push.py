@@ -17,7 +17,7 @@ class Push(ProjectMixin, CommandHelpers, Command):
             'args',
             nargs=argparse.REMAINDER,
             help="One or more boolean S3 sync flags" +
-            " without leading dashes, e.g. delete or dry-run"
+            " without leading dashes, e.g. delete or dryrun"
         )
         return parser
 
