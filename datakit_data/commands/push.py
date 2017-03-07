@@ -3,6 +3,7 @@ import argparse
 from cliff.command import Command
 from datakit import CommandHelpers
 
+from ..extra_flags import ExtraFlags
 from ..project_mixin import ProjectMixin
 from ..s3 import S3
 
@@ -25,12 +26,9 @@ class Push(ProjectMixin, CommandHelpers, Command):
         user_profile = self.project_configs['aws_user_profile']
         bucket = self.project_configs['s3_bucket']
         s3 = S3(user_profile, bucket)
-        clean_flags = self.prepare_extra_flags(parsed_args.args)
+        clean_flags = ExtraFlags.convert(parsed_args.args)
         s3.push(
             'data/',
             self.project_configs['s3_path'],
             extra_flags=clean_flags
         )
-
-    def prepare_extra_flags(self, flags):
-        return ["--{}".format(flag) for flag in flags]
