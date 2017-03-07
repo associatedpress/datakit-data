@@ -6,3 +6,4 @@ __version__ = '0.1.0'
 
 from .commands.init import Init
 from .commands.push import Push
+from .commands.pull import Pull

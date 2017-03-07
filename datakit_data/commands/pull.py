@@ -1,0 +1,36 @@
+# -*- coding: utf-8 -*-
+import argparse
+from cliff.command import Command
+from datakit import CommandHelpers
+
+from ..project_mixin import ProjectMixin
+from ..s3 import S3
+
+
+class Pull(ProjectMixin, CommandHelpers, Command):
+
+    "Pull data from S3"
+
+    def get_parser(self, prog_name):
+        parser = super(Pull, self).get_parser(prog_name)
+        parser.add_argument(
+            'args',
+            nargs=argparse.REMAINDER,
+            help="One or more boolean S3 sync flags" +
+            " without leading dashes, e.g. delete or dryrun"
+        )
+        return parser
+
+    def take_action(self, parsed_args):
+        user_profile = self.project_configs['aws_user_profile']
+        bucket = self.project_configs['s3_bucket']
+        s3 = S3(user_profile, bucket)
+        clean_flags = self.prepare_extra_flags(parsed_args.args)
+        s3.pull(
+            self.project_configs['s3_path'],
+            'data/',
+            extra_flags=clean_flags
+        )
+
+    def prepare_extra_flags(self, flags):
+        return ["--{}".format(flag) for flag in flags]

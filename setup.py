@@ -42,7 +42,7 @@ setup(
         'datakit.plugins': [
             'data:init= datakit_data:Init',
             'data:push= datakit_data:Push',
-            #'data:pull= datakit_data:Pull',
+            'data:pull= datakit_data:Pull',
         ]
     },
     install_requires=requirements,
