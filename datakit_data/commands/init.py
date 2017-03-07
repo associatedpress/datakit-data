@@ -3,7 +3,7 @@ import os
 
 from cliff.command import Command
 from datakit import CommandHelpers
-from datakit.utils import mkdir_p, write_json
+from datakit.utils import mkdir_p, read_json, write_json
 
 from ..project_mixin import ProjectMixin
 
@@ -35,9 +35,8 @@ class Init(ProjectMixin, CommandHelpers, Command):
 
         """
         if not os.path.exists(self.project_config_path):
-
             try:
-                plugin_configs = self.configs
+                plugin_configs = read_json(self.plugin_config_path)
             except FileNotFoundError:
                 plugin_configs = {}
             to_write = self.default_configs.copy()

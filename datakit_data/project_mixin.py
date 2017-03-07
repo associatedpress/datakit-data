@@ -9,6 +9,8 @@ class ProjectMixin:
 
     "Mixin with code useful across plugin commands"
 
+    plugin_slug = 'datakit-data'
+
     @property
     def default_configs(self):
         return {
@@ -19,7 +21,6 @@ class ProjectMixin:
 
     @property
     def project_slug(self):
-        # TODO: Directory must contain the data/ dir or else raises exception
         return os.path.basename(os.getcwd())
 
     @property

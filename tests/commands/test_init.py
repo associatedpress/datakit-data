@@ -7,6 +7,8 @@ from conftest import (
     create_project_config,
     dir_contents
 )
+
+from datakit.utils import read_json
 from datakit_data import Init
 
 
@@ -34,6 +36,21 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert re.match(r"\d{4}/fake-project", cmd.project_configs['s3_path'])
 
 
+def test_plugin_configs_not_initialized(dkit_home):
+    """
+    Init should NOT auto-generate plugin-level configurations.
+    """
+    cmd = Init(None, None, cmd_name='data:init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    # Guard against auto-generation of plugin-level configs
+    plugin_config_file_pth = os.path.join(
+        dkit_home,
+        'plugins/datakit-data/config.json'
+    )
+    assert not os.path.exists(plugin_config_file_pth)
+
+
 def test_inherit_plugin_level_configs(dkit_home, fake_project):
     """
     Plugin-level default configs should override project-level defaults
@@ -44,12 +61,19 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
         's3_path': '',
         'aws_user_profile': 'ap'
     }
-    create_plugin_config(dkit_home, 'fake-project', plugin_configs)
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     # Iniitalize project
     cmd = Init(None, None, cmd_name='data:init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     assert cmd.project_configs == plugin_configs
+    assert 'datakit-data' in dir_contents(dkit_home)
+    plugin_config_file_pth = os.path.join(
+        dkit_home,
+        'plugins/datakit-data/config.json'
+    )
+    assert 'fake-project' not in dir_contents(dkit_home)
+    assert os.path.exists(plugin_config_file_pth)
 
 
 def test_preexisting_project_configs_honored(fake_project):
