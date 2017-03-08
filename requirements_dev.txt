@@ -12,3 +12,4 @@ Sphinx==1.4.8
 cryptography==1.7
 pytest==2.9.2
 pytest-catchlog==1.2.2
+pytest-mock==1.5.0
