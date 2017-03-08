@@ -4,18 +4,18 @@ datakit-data
 ---------------
 
 A `datakit <https://pypi.python.org/pypi/datakit-core/>`_ plugin to simplify use of
-Amazon S3 as a data store for data science projects..
+Amazon S3 as a data store for data science projects.
 
 * `Code <https://github.com/associatedpress/datakit-data>`_
 * `Docs <http://datakit-data.readthedocs.io/en/latest/>`_
 
 """
-from setuptools import setup
+from setuptools import setup, find_packages
 
 requirements = [
     'awscli',
     'cliff',
-    'datakit-core>=0.2.0',
+    'datakit-core>=0.2.1',
 ]
 
 test_requirements = [
@@ -32,11 +32,7 @@ setup(
     author="Serdar Tumgoren",
     author_email='stumgoren@ap.org',
     url='https://github.com/associatedpress/datakit-data',
-    packages=[
-        'datakit_data',
-    ],
-    package_dir={'datakit_data':
-                 'datakit_data'},
+    packages=find_packages(),
     include_package_data=True,
     entry_points={
         'datakit.plugins': [
@@ -48,9 +44,9 @@ setup(
     install_requires=requirements,
     license="ISC license",
     zip_safe=False,
-    keywords='datakit-data',
+    keywords='datakit',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 3 - Alpha',
         'Environment :: Console',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: ISC License (ISCL)',

@@ -2,7 +2,9 @@
 History
 =======
 
-0.1.0 (2017-YY-DD)
+0.1.0 (TBD)
 ------------------
 
-* TK: First release on PyPI.
+* Push/Pull commands
+* Pass-through of boolean command line flags
+* Plugin-level configuration inheritance
