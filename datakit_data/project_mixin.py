@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import datetime
 import os
 
 from datakit.utils import read_json
@@ -16,7 +15,7 @@ class ProjectMixin:
         return {
             'aws_user_profile': 'default',
             's3_bucket': '',
-            's3_path': self.default_s3_project_path
+            's3_path': self.project_slug
         }
 
     @property
@@ -33,8 +32,3 @@ class ProjectMixin:
     @property
     def project_config_path(self):
         return os.path.join('config', 'datakit-data.json')
-
-    @property
-    def default_s3_project_path(self):
-        year = str(datetime.date.today().year)
-        return '/'.join([year, self.project_slug])

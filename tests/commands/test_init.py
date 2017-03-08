@@ -1,5 +1,4 @@
 import os
-import re
 from unittest import mock
 
 from conftest import (
@@ -8,6 +7,7 @@ from conftest import (
     dir_contents
 )
 
+from datakit.utils import read_json
 from datakit_data import Init
 
 
@@ -24,15 +24,16 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert os.path.exists(os.path.join(fake_project, 'data/.gitkeep'))
     assert 'Initializing project' in caplog.text
 
-    # Test default project configs
-    assert cmd.configs['aws_user_profile'] == 'default'
-    assert cmd.configs['s3_bucket'] == ''
-    assert re.match(r"\d{4}/fake-project", cmd.configs['s3_path'])
-
     # Test default configs initialized
     assert cmd.project_configs['aws_user_profile'] == 'default'
     assert cmd.project_configs['s3_bucket'] == ''
-    assert re.match(r"\d{4}/fake-project", cmd.project_configs['s3_path'])
+    assert cmd.project_configs['s3_path'] == 'fake-project'
+
+    # Test default configs initialized
+    project_configs = read_json(cmd.project_config_path)
+    assert project_configs['aws_user_profile'] == 'default'
+    assert project_configs['s3_bucket'] == ''
+    assert project_configs['s3_path'] == 'fake-project'
 
 
 def test_plugin_configs_not_initialized(dkit_home):
