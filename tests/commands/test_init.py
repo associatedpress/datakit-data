@@ -44,11 +44,7 @@ def test_plugin_configs_not_initialized(dkit_home):
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     # Guard against auto-generation of plugin-level configs
-    plugin_config_file_pth = os.path.join(
-        dkit_home,
-        'plugins/datakit-data/config.json'
-    )
-    assert not os.path.exists(plugin_config_file_pth)
+    assert not os.path.exists(cmd.plugin_config_path)
 
 
 def test_inherit_plugin_level_configs(dkit_home, fake_project):
@@ -68,12 +64,8 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     cmd.run(parsed_args)
     assert cmd.project_configs == plugin_configs
     assert 'datakit-data' in dir_contents(dkit_home)
-    plugin_config_file_pth = os.path.join(
-        dkit_home,
-        'plugins/datakit-data/config.json'
-    )
     assert 'fake-project' not in dir_contents(dkit_home)
-    assert os.path.exists(plugin_config_file_pth)
+    assert os.path.exists(cmd.plugin_config_path)
 
 
 def test_preexisting_project_configs_honored(fake_project):
