@@ -68,6 +68,53 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     assert os.path.exists(cmd.plugin_config_path)
 
 
+def test_s3_path_prefix(dkit_home, fake_project):
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_prefix': 'projects/2017',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    # Iniitalize project
+    cmd = Init(None, None, cmd_name='data:init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project'
+    assert 's3_path_prefix' not in cmd.project_configs
+
+
+def test_s3_path_suffix(dkit_home, fake_project):
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_suffix': 'data',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    # Iniitalize project
+    cmd = Init(None, None, cmd_name='data:init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    assert cmd.project_configs['s3_path'] == 'fake-project/data'
+    assert 's3_path_suffix' not in cmd.project_configs
+
+
+def test_s3_path_prefix_and_suffix(dkit_home, fake_project):
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_prefix': 'projects/2017',
+        's3_path_suffix': 'data',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    # Iniitalize project
+    cmd = Init(None, None, cmd_name='data:init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project/data'
+    assert 's3_path_prefix' not in cmd.project_configs
+    assert 's3_path_suffix' not in cmd.project_configs
+
+
 def test_preexisting_project_configs_honored(fake_project):
     """
     Subsequent initializations should not overwrite a pre-existing project config.

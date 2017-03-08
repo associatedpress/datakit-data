@@ -41,4 +41,19 @@ class Init(ProjectMixin, CommandHelpers, Command):
                 plugin_configs = {}
             to_write = self.default_configs.copy()
             to_write.update(plugin_configs)
+            self.finalize_configs(to_write)
             write_json(self.project_config_path, to_write)
+
+    def finalize_configs(self, configs):
+        prefix = self.pop_key(configs, 's3_path_prefix')
+        suffix = self.pop_key(configs, 's3_path_suffix')
+        s3_path = configs['s3_path']
+        bits = [bit for bit in [prefix, s3_path, suffix] if bit.strip()]
+        if bits:
+            configs['s3_path'] = os.path.join(*bits)
+
+    def pop_key(self, config, name):
+        try:
+            return config.pop(name)
+        except KeyError:
+            return ''
