@@ -28,7 +28,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
         s3.pull(
-            self.project_configs['s3_path'],
             'data/',
+            self.project_configs['s3_path'],
             extra_flags=clean_flags
         )

@@ -1,3 +1,4 @@
+import subprocess
 from unittest import mock
 
 import pytest
@@ -47,9 +48,29 @@ def test_pull_invocation(mocker):
     cmd.run(parsed_args)
     pull_mock.assert_any_call(
         mock.ANY,
-        '2017/fake-project',
         'data/',
+        '2017/fake-project',
         extra_flags=[]
+    )
+
+
+def test_pull_at_s3_layer(mocker):
+    mock_subprocess = mocker.patch(
+        'datakit_data.s3.subprocess.check_output',
+        autospec=True,
+        return_value=b'Some gunk\rupload: foo\nMore gunk\rupload: bar\n'
+    )
+    cmd = Pull(None, None, 'data:pull')
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    cmd.run(parsed_args)
+    expected_cmd = [
+        'aws', 's3', 'sync', '--profile', 'ap',
+        's3://foo.org/2017/fake-project/', 'data/'
+    ]
+    mock_subprocess.assert_called_once_with(
+        expected_cmd,
+        stderr=subprocess.STDOUT
     )
 
 
@@ -64,7 +85,7 @@ def test_boolean_cli_flags(mocker):
     cmd.run(parsed_args)
     pull_mock.assert_any_call(
         mock.ANY,
-        '2017/fake-project',
         'data/',
+        '2017/fake-project',
         extra_flags=['--dryrun']
     )
