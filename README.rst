@@ -1,6 +1,6 @@
-===============================
-datakit-data plugin
-===============================
+============
+datakit-data
+============
 
 
 .. image:: https://img.shields.io/pypi/v/datakit-data.svg
@@ -18,37 +18,12 @@ datakit-data plugin
      :alt: Updates
 
 
-A datakit_ plugin to manage data assets on AWS S3.
+The `datakit-data`_ package is a datakit_ plugin designed to help data analysts
+easily archive and share data assets on S3.
 
-* Free software: ISC license
-* Documentation: https://datakit-data.readthedocs.io.
+*Please see our `official documentation`_ for install and usage.*
 
-
-Features
-========
-
-* TODO
-
-Installation
-============
-
-In order to use this plugin with a system-wide install of datakit_::
-
-  $ sudo pip install datakit-data
-
-Usage
-=====
-
-* TODO
-
-
-Credits
-=======
-
-This package was created with Cookiecutter_ and the `associatedpress/cookiecutter-datakit-plugin`_ 
-project template (a modified version of the most excellent `audreyr/cookiecutter-pypackage`_).
 
 .. _datakit: https://github.com/associatedpress/datakit-core
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
-.. _`associatedpress/cookiecutter-datakit-plugin`: https://github.com/associatedpress/cookiecutter-datakit-plugin
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+.. _`official documentation`: https://github.com/associatedpress/datakit-core
+
