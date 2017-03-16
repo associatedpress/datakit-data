@@ -11,14 +11,9 @@ Overview
 .. image:: https://img.shields.io/travis/associatedpress/datakit-data.svg
         :target: https://travis-ci.org/associatedpress/datakit-data
 
-.. image:: https://readthedocs.org/projects/datakit-data/badge/?version=latest
-        :target: https://datakit-data.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
-
-.. image:: https://pyup.io/repos/github/associatedpress/datakit-data/shield.svg
-     :target: https://pyup.io/repos/github/associatedpress/datakit-data/
-     :alt: Updates
-
+.. image:: http://readthedocs.org/projects/datakit-data/badge/?version=latest
+   :target: https://datakit-data.readthedocs.io/en/latest/
+   :alt: Documentation Status
 
 The datakit-data_ package is a plugin for the  datakit_ command-line tool. The plugin helps
 archive and share data assets on `Amazon S3`_ by providing a few simple commands for
