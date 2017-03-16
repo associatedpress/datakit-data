@@ -10,15 +10,16 @@ data, using `AWS S3`_ as a centralized data store.
 Setup
 -----
 
-Integrating a project with S3 involves two steps:
+Integrating a project with S3 involves a few steps:
 
-* Initializing the project
-* Updating AWS configurations, as needed
+* Initialize the project
+* Check S3 to ensure a new project won't overwrite a pre-existing project on S3 [1]_
+* Update AWS configurations, as needed
+* Exclude the project's `data/` directory from version control (see :ref:`usage-vcs--and-data`).
 
-.. note::
 
-  All datakit-data commands must be run from the root folder of a project directory.
 
+.. _usage-init:
 
 Initialize
 ~~~~~~~~~~
@@ -31,7 +32,7 @@ To initialize::
 The `data:init` command creates a:
 
 * `data/` - a directory where data files should be placed. This directory will be synced to the S3
-  bucket and path specifiecd in the project configuration file (see below).
+  bucket and path specified in the project configuration file (see below).
 * `config/datakit-data.json` - a JSON file with the below settings::
 
     {
@@ -41,6 +42,12 @@ The `data:init` command creates a:
     }
 
 
+.. note::
+
+  datakit-data does not currently provide safeguards against accidental overwrites
+  of previously created projects (on S3) with an identical name. Users should always
+  double-check the target S3 bucket to ensure that a project path has not already
+  been used.
 
 .. _usage-configure:
 
@@ -129,6 +136,12 @@ And of course, you can use both of these settings in tandem::
 Data push/pull
 --------------
 
+.. note::
+
+  The below commands must be run from a directory initialized and configured
+  for use with S3 (see :ref:`usage-init` for details).
+
+
 Pushing and pulling data between your local machine and the S3 data store requires two commands:
 
   .. code::
@@ -145,8 +158,9 @@ S3 bucket and path specified in `config/datakit-data.json`, or vice versa.
 By default, this command does not delete previously written files in a target location
 if they have been removed in the source location.
 
-This functionality is available, however, via the `--delete` flag of the underly `AWS S3 sync`_ utility.
-`datakit-data` provides access to a limited subset of this functionality (see :ref:`usage-extraflags`).
+This functionality is available, however, via the `\-\-delete` flag of the underlying `AWS S3 sync`_ utility.
+`datakit-data` provides access to the `\-\-delete` flag and a limited set of other options provided by the `sync`
+command (see :ref:`usage-extraflags`).
 
 .. _usage-extraflags:
 
@@ -154,10 +168,13 @@ Extra flags
 ~~~~~~~~~~~~
 
 While `datakit-data` is intended to simplify and standardize working with S3 as a data store, it
-also exposes a limited subset of the more advanced features of the underlying `AWS S3 sync`_ utility.
+also exposes a subset of more advanced options for the underlying `AWS S3 sync`_ utility.
 
-Users can pass any **boolean** flag supported by *S3 sync* to the plugin's `push` or `pull` commands. 
-The flags must be passed as additional paramaters **without leading dashes** [1]_ 
+Users can pass any **boolean** flag supported by *S3 sync* to the plugin's `push` or `pull` commands.
+
+Boolean flags are those that do not accept values (i.e. simply calling them toggles a behavior on or off).
+
+The flags must be passed to `datakit` as additional paramaters **without leading dashes** [2]_ 
 
 For example, to delete files on S3 that are *not* present locally::
 
@@ -181,16 +198,15 @@ Version control and data
 -------------------------
 
 This plugin expects data files associated with a project to live in a `data/` directory
-at the root of the project's folder. This is typically the root of a code
-repository under version control.
+at the root of a project folder. This is typically the root of a code repository.
 
-The `data/` directory itsellf, however, should be excluded
-from version control (see :ref:`readme-overview` for background on this decision).
+While code to acquire, clean and analyze data should be placed under version control,
+the `data/` *should be excluded from version control.*
 
 .. note::
 
   Version control systems have different mechanisms to prevent files from being "tracked".
-  Git users, for instance, can add the `data/` directory to a project's gitignore_ file.
+  Git users, for instance, should add the `data/` directory to a project's .gitignore_ file.
 
 
 
@@ -202,7 +218,8 @@ from version control (see :ref:`readme-overview` for background on this decision
 .. _`aws configure`: http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 .. _datakit: https://github.com/associatedpress/datakit-core
 .. _datakit-data: https://github.com/associatedpress/datakit-data
-.. _gitignore: https://git-scm.com/docs/gitignore
+.. _.gitignore: https://git-scm.com/docs/gitignore
 
-.. [1] Leading slashes must be dropped to enable datakit to differentiate between its own flags and those intended for
+.. [1] datakit-data does not currently guard against overwrites of pre-existing projects of the same name.
+.. [2] Leading slashes must be dropped to enable datakit to differentiate between its own flags and those intended for
    pass-through to the underlying AWS S3 sync utility.

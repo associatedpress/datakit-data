@@ -2,12 +2,10 @@
 Contributors
 ============
 
-Development Lead
-----------------
+**Development Lead**
 
 * Serdar Tumgoren <stumgoren@ap.org>
 
-Contributors
-------------
+**Contributors**
 
-None yet. Why not be the first?
+* Michelle Minkoff <mminkoff@ap.org>
