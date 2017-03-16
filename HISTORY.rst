@@ -2,7 +2,7 @@
 History
 =======
 
-0.1.0 (TBD)
+0.1.0 (2016-03-16)
 ------------------
 
 * Project initialization command
