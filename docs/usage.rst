@@ -76,7 +76,7 @@ Default configurations
 As a convenience, `datakit-data` provides the ability to pre-configure default settings for
 AWS integration. This feature helps speed up S3 integration for new projects.
 
-Default values for any of the settings mentioned in :ref:`usage-configure` can be placed
+Default values for the `aws_user_profile` and `s3_bucket` settings mentioned in :ref:`usage-configure` can be placed
 in **~/.datakit/plugins/datakit-data/config.json**. These configurations will then be applied
 to all projects when `datakit data:init` is run.
 
@@ -105,7 +105,7 @@ at any point by editing `config/datakit-data.json` for a given project.
 **s3_path_prefix**
   one or more directory levels to be **prepended** to a project config's S3 path
 
-**s3_path_prefix**
+**s3_path_suffix**
   one or more directory levels to be **appended** to a project config's S3 path
 
 
@@ -201,12 +201,12 @@ This plugin expects data files associated with a project to live in a `data/` di
 at the root of a project folder. This is typically the root of a code repository.
 
 While code to acquire, clean and analyze data should be placed under version control,
-the `data/` *should be excluded from version control.*
+the `data/` directory itself *should be excluded from version control.*
 
 .. note::
 
   Version control systems have different mechanisms to prevent files from being "tracked".
-  Git users, for instance, should add the `data/` directory to a project's .gitignore_ file.
+  Git users, for instance, should add the `data/` directory to a project's `.gitignore`_ file.
 
 
 
@@ -218,7 +218,7 @@ the `data/` *should be excluded from version control.*
 .. _`aws configure`: http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 .. _datakit: https://github.com/associatedpress/datakit-core
 .. _datakit-data: https://github.com/associatedpress/datakit-data
-.. _.gitignore: https://git-scm.com/docs/gitignore
+.. _`.gitignore`: https://git-scm.com/docs/gitignore
 
 .. [1] datakit-data does not currently guard against overwrites of pre-existing projects of the same name.
 .. [2] Leading slashes must be dropped to enable datakit to differentiate between its own flags and those intended for
