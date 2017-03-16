@@ -29,7 +29,7 @@ To initialize::
   $ cd /path/to/my-project
   $ datakit data:init
 
-The `data:init` command creates a:
+The `data:init` command creates:
 
 * `data/` - a directory where data files should be placed. This directory will be synced to the S3
   bucket and path specified in the project configuration file (see below).
