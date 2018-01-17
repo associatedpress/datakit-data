@@ -25,7 +25,7 @@ def test_s3_instantiation(mocker):
         'datakit_data.commands.pull.S3',
         autospec=True,
     )
-    cmd = Pull(None, None, 'data:pull')
+    cmd = Pull(None, None, 'data pull')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -42,7 +42,7 @@ def test_pull_invocation(mocker):
         'datakit_data.commands.pull.S3.pull',
         autospec=True,
     )
-    cmd = Pull(None, None, 'data:pull')
+    cmd = Pull(None, None, 'data pull')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -60,7 +60,7 @@ def test_pull_at_s3_layer(mocker):
         autospec=True,
         return_value=b'Some gunk\rupload: foo\nMore gunk\rupload: bar\n'
     )
-    cmd = Pull(None, None, 'data:pull')
+    cmd = Pull(None, None, 'data pull')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -81,7 +81,7 @@ def test_boolean_cli_flags(mocker):
     )
     parsed_args = mock.Mock()
     parsed_args.args = ['dryrun']
-    cmd = Pull(None, None, 'data:pull')
+    cmd = Pull(None, None, 'data pull')
     cmd.run(parsed_args)
     pull_mock.assert_any_call(
         mock.ANY,

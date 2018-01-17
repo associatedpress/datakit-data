@@ -2,6 +2,13 @@
 History
 =======
 
+
+0.2.0 (2018-01-17)
+------------------
+
+* Switch from colon- to space-separated plugin commands
+
+
 0.1.0 (2016-03-16)
 ------------------
 

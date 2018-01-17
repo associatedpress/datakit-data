@@ -44,10 +44,10 @@ has been integrated with S3 (see :ref:`usage-init`)::
   $ cd /path/to/data-project
 
   # Stash data on S3
-  $ datakit data:push
+  $ datakit data push
 
   # Fetch data from S3
-  $ datakit data:pull
+  $ datakit data pull
 
 Please see :ref:`usage` for more details on integrating a project with an S3 data store.
 

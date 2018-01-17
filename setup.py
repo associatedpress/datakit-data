@@ -26,7 +26,7 @@ test_requirements = [
 
 setup(
     name='datakit-data',
-    version='0.1.0',
+    version='0.2.0',
     description="A datakit plugin to manage data assets on AWS S3.",
     long_description=__doc__,
     author="Serdar Tumgoren",
@@ -36,9 +36,9 @@ setup(
     include_package_data=True,
     entry_points={
         'datakit.plugins': [
-            'data:init= datakit_data:Init',
-            'data:push= datakit_data:Push',
-            'data:pull= datakit_data:Pull',
+            'data init= datakit_data:Init',
+            'data push= datakit_data:Push',
+            'data pull= datakit_data:Pull',
         ]
     },
     install_requires=requirements,

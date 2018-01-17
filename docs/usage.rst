@@ -27,9 +27,9 @@ Initialize
 To initialize::
 
   $ cd /path/to/my-project
-  $ datakit data:init
+  $ datakit data init
 
-The `data:init` command creates:
+The `data init` command creates:
 
 * `data/` - a directory where data files should be placed. This directory will be synced to the S3
   bucket and path specified in the project configuration file (see below).
@@ -78,7 +78,7 @@ AWS integration. This feature helps speed up S3 integration for new projects.
 
 Default values for the `aws_user_profile` and `s3_bucket` settings mentioned in :ref:`usage-configure` can be placed
 in **~/.datakit/plugins/datakit-data/config.json**. These configurations will then be applied
-to all projects when `datakit data:init` is run.
+to all projects when `datakit data init` is run.
 
 
 Example
@@ -146,8 +146,8 @@ Pushing and pulling data between your local machine and the S3 data store requir
 
   .. code::
 
-    $ datakit data:push
-    $ datakit data:pull
+    $ datakit data push
+    $ datakit data pull
 
 
 The above commands provide a human-friendly interface to the `AWS S3 sync`_ commmand line utility.
@@ -178,15 +178,15 @@ The flags must be passed to `datakit` as additional paramaters **without leading
 
 For example, to delete files on S3 that are *not* present locally::
 
-  $ datakit data:push delete
+  $ datakit data push delete
 
 To view which files will be affected before pushing data to S3::
 
-  $ datakit data:push dryrun
+  $ datakit data push dryrun
 
   or
 
-  $ datakit data:push delete dryrun
+  $ datakit data push delete dryrun
 
 
 Please refer to the `AWS S3 sync`_ documentation for details on other boolean flags.

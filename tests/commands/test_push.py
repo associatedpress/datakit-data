@@ -24,7 +24,7 @@ def test_s3_instantiation(mocker):
         'datakit_data.commands.push.S3',
         autospec=True,
     )
-    cmd = Push(None, None, 'data:push')
+    cmd = Push(None, None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -41,7 +41,7 @@ def test_push_invocation(mocker):
         'datakit_data.commands.push.S3.push',
         autospec=True,
     )
-    cmd = Push(None, None, 'data:push')
+    cmd = Push(None, None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -60,7 +60,7 @@ def test_boolean_cli_flags(mocker):
     )
     parsed_args = mock.Mock()
     parsed_args.args = ['dry-run']
-    cmd = Push(None, None, 'data:push')
+    cmd = Push(None, None, 'data push')
     cmd.run(parsed_args)
     push_mock.assert_any_call(
         mock.ANY,

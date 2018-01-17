@@ -10,7 +10,7 @@ Install::
 Initialize project for use with S3::
 
   $ cd /path/to/my-project
-  $ datakit data:init
+  $ datakit data init
 
 Edit `config/datakit-data.json`::
 
@@ -26,8 +26,8 @@ Drop data files in project data directory::
 
 Push/pull data files between local machine and S3::
 
-  $ datakit data:push
-  $ datakit data:pull
+  $ datakit data push
+  $ datakit data pull
 
 .. note::
 

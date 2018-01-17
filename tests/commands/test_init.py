@@ -15,7 +15,7 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     """
     Init should auto-generate directories and project-level config file.
     """
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     contents = dir_contents(tmpdir.strpath)
@@ -40,7 +40,7 @@ def test_plugin_configs_not_initialized(dkit_home):
     """
     Init should NOT auto-generate plugin-level configurations.
     """
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     # Guard against auto-generation of plugin-level configs
@@ -59,7 +59,7 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     # Iniitalize project
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     assert cmd.project_configs == plugin_configs
@@ -76,7 +76,7 @@ def test_s3_path_prefix(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     # Iniitalize project
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project'
@@ -91,7 +91,7 @@ def test_s3_path_suffix(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     # Iniitalize project
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'fake-project/data'
@@ -107,7 +107,7 @@ def test_s3_path_prefix_and_suffix(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     # Iniitalize project
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project/data'
@@ -121,7 +121,7 @@ def test_preexisting_project_configs_honored(fake_project):
     """
     # Mimic a prior initialization by pre-creating the config file
     create_project_config(fake_project, {'aws_user_profile': 'user2'})
-    cmd = Init(None, None, cmd_name='data:init')
+    cmd = Init(None, None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
     proj_configs = cmd.project_configs
