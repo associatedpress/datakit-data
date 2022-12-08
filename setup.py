@@ -26,7 +26,7 @@ test_requirements = [
 
 setup(
     name='datakit-data',
-    version='0.2.0',
+    version='0.3.0',
     description="A datakit plugin to manage data assets on AWS S3.",
     long_description=__doc__,
     author="Serdar Tumgoren",
