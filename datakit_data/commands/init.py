@@ -26,7 +26,9 @@ class Init(ProjectMixin, CommandHelpers, Command):
         dirs_to_create = ['data', 'config']
         [mkdir_p(directory) for directory in dirs_to_create]
         open('data/.gitkeep', 'w').close()
+        self.log.info("Created data/ directory")
         self.create_project_config()
+        self.log.info("Created config/datakit-data.json")
 
     def create_project_config(self):
         """Create project config if they don't already exist.
@@ -34,15 +36,18 @@ class Init(ProjectMixin, CommandHelpers, Command):
         Plugin-level configs, if configured, will override project defaults.
 
         """
-        if not os.path.exists(self.project_config_path):
-            try:
-                plugin_configs = read_json(self.plugin_config_path)
-            except FileNotFoundError:
-                plugin_configs = {}
-            to_write = self.default_configs.copy()
-            to_write.update(plugin_configs)
-            self.finalize_configs(to_write)
-            write_json(self.project_config_path, to_write)
+        if os.path.exists(self.project_config_path):
+            return
+        try:
+            plugin_configs = read_json(self.plugin_config_path)
+        except FileNotFoundError:
+            plugin_configs = {}
+            self.log.info(f"No user level config found at {self.plugin_config_path}, empty config created!")
+            self.log.info("You will need to fill out config/datakit-data.json manually")
+        to_write = self.default_configs.copy()
+        to_write.update(plugin_configs)
+        self.finalize_configs(to_write)
+        write_json(self.project_config_path, to_write)
 
     def finalize_configs(self, configs):
         prefix = self.pop_key(configs, 's3_path_prefix')
