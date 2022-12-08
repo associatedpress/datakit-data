@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import argparse
+import os
 from cliff.command import Command
 from datakit import CommandHelpers
 
@@ -25,6 +26,12 @@ class Push(ProjectMixin, CommandHelpers, Command):
     def take_action(self, parsed_args):
         user_profile = self.project_configs['aws_user_profile']
         bucket = self.project_configs['s3_bucket']
+        if not os.path.exists("config/datakit-data.json"):
+            self.log.info("No config file found - have you run `datakit data init`?")
+            return
+        if bucket is "":
+            self.log.info("No bucket specified in config - no data pushed")
+            return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
         s3.push(
