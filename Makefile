@@ -79,9 +79,8 @@ check-release: ## check release for potential errors
 test-release: clean dist ## release distros to test.pypi.org
 	twine upload -r testpypi dist/*
 
-release: clean ## package and upload a release
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
+release: clean dist ## package and upload a release
+	twine upload -r pypi dist/*
 
 dist: clean ## builds source and wheel package
 	python setup.py sdist
