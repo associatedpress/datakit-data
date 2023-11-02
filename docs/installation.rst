@@ -7,7 +7,7 @@ Install the plugin
 
 In order to use this plugin with a system-wide install of datakit_::
 
-  $ sudo pip install datakit-data
+  $ pip install datakit-data
 
 
 Configure AWS
