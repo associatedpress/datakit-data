@@ -29,7 +29,7 @@ class Push(ProjectMixin, CommandHelpers, Command):
         if not os.path.exists("config/datakit-data.json"):
             self.log.info("No config file found - have you run `datakit data init`?")
             return
-        if bucket is "":
+        if bucket == "":
             self.log.info("No bucket specified in config - no data pushed")
             return
         s3 = S3(user_profile, bucket)
