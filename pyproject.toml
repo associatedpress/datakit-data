@@ -1,0 +1,58 @@
+[build-system]
+requires = ["uv-build"]
+build-backend = "uv_build"
+
+[project]
+name = "datakit-data"
+version = "0.4.0"
+description = "A datakit plugin to manage data assets on AWS S3."
+authors = [
+    {name = "Larry Fenn", email = "lfenn@ap.org"},
+]
+license = {text = "ISC"}
+requires-python = ">=3.10"
+dependencies = [
+    "awscli",
+    "cliff",
+    "datakit-core>=0.2.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/associatedpress/datakit-data"
+
+[project.entry-points."datakit.plugins"]
+"data init" = "datakit_data:Init"
+"data push" = "datakit_data:Push"
+"data pull" = "datakit_data:Pull"
+
+[dependency-groups]
+dev = [
+    "bumpversion",
+    "coverage",
+    "cryptography>=42.0.4",
+    "ruff",
+    "pytest",
+    "pytest-mock",
+    "Sphinx",
+    "tox",
+    "tox-uv",
+    "watchdog",
+]
+
+[tool.uv.build-backend]
+module-root = ""
+
+[tool.tox]
+env_list = ["py311", "py312", "py313"]
+
+[tool.tox.env_run_base]
+dependency_groups = ["dev"]
+commands = [["pytest", "{posargs}"]]
+
+[tool.ruff]
+line-length = 130
+exclude = ["docs", "datakit_data/__init__.py"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/"]
+log_level = "INFO"
