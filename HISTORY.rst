@@ -2,6 +2,15 @@
 History
 =======
 
+0.4.0 (2026-06-03)
+------------------
+
+* Switched project to uv ecosystem
+
+0.3.0 (2022-12-08)
+------------------
+
+* Added some better feedback on common errors
 
 0.2.0 (2018-01-17)
 ------------------

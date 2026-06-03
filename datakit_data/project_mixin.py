@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 
 from datakit.utils import read_json

@@ -1,45 +1,45 @@
-datakit_data package
-====================
+datakit\_data package
+=====================
 
 Subpackages
 -----------
 
 .. toctree::
+   :maxdepth: 4
 
-    datakit_data.commands
+   datakit_data.commands
 
 Submodules
 ----------
 
-datakit_data.extra_flags module
--------------------------------
-
-.. automodule:: datakit_data.extra_flags
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-datakit_data.project_mixin module
+datakit\_data.extra\_flags module
 ---------------------------------
 
-.. automodule:: datakit_data.project_mixin
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automodule:: datakit_data.extra_flags
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
-datakit_data.s3 module
-----------------------
+datakit\_data.project\_mixin module
+-----------------------------------
+
+.. automodule:: datakit_data.project_mixin
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+datakit\_data.s3 module
+-----------------------
 
 .. automodule:: datakit_data.s3
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------
 
 .. automodule:: datakit_data
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:
