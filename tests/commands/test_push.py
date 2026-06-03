@@ -1,3 +1,4 @@
+import os
 from unittest import mock
 
 import pytest
@@ -24,7 +25,7 @@ def test_s3_instantiation(mocker):
         'datakit_data.commands.push.S3',
         autospec=True,
     )
-    cmd = Push(None, None, 'data push')
+    cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -41,7 +42,7 @@ def test_push_invocation(mocker):
         'datakit_data.commands.push.S3.push',
         autospec=True,
     )
-    cmd = Push(None, None, 'data push')
+    cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
@@ -60,7 +61,7 @@ def test_boolean_cli_flags(mocker):
     )
     parsed_args = mock.Mock()
     parsed_args.args = ['dry-run']
-    cmd = Push(None, None, 'data push')
+    cmd = Push(mock.Mock(), None, 'data push')
     cmd.run(parsed_args)
     push_mock.assert_any_call(
         mock.ANY,
@@ -68,3 +69,32 @@ def test_boolean_cli_flags(mocker):
         '2017/fake-project',
         extra_flags=['--dry-run']
     )
+
+
+def test_get_parser():
+    cmd = Push(mock.Mock(), None, 'data push')
+    parser = cmd.get_parser('data push')
+    args = parser.parse_args([])
+    assert hasattr(args, 'args')
+
+
+def test_no_config_file(caplog):
+    os.remove('config/datakit-data.json')
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    cmd.run(parsed_args)
+    assert 'have you run `datakit data init`' in caplog.text
+
+
+def test_empty_bucket(caplog, fake_project):
+    create_project_config(fake_project, {
+        'aws_user_profile': 'ap',
+        's3_bucket': '',
+        's3_path': '2017/fake-project',
+    })
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    cmd.run(parsed_args)
+    assert 'No bucket specified' in caplog.text

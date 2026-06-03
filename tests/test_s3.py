@@ -81,6 +81,23 @@ def test_pull(mocker):
     )
 
 
+def test_subprocess_error(caplog, mocker):
+    error = subprocess.CalledProcessError(
+        returncode=1,
+        cmd=['aws', 's3', 'sync'],
+        output=b'Error: Access Denied'
+    )
+    mocker.patch(
+        'datakit_data.s3.subprocess.check_output',
+        autospec=True,
+        side_effect=error
+    )
+    s3 = S3('ap', 'foo.org')
+    s3.push('data/', '2017/fake-project')
+    assert '*** Error ***' in caplog.text
+    assert 'Error: Access Denied' in caplog.text
+
+
 def test_logging(caplog, mocker):
     mocker.patch(
         'datakit_data.s3.subprocess.check_output',
