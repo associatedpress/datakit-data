@@ -1,4 +1,6 @@
+import getpass
 import os
+from datetime import date
 
 from cliff.command import Command
 from datakit import CommandHelpers
@@ -44,6 +46,7 @@ class Init(ProjectMixin, CommandHelpers, Command):
             self.write_configs(plugin_configs)
         to_write = self.default_configs.copy()
         to_write.update(plugin_configs)
+        self._expand_vars(to_write)
         self.finalize_configs(to_write)
         write_json(self.project_config_path, to_write)
 
@@ -65,6 +68,21 @@ class Init(ProjectMixin, CommandHelpers, Command):
             if value:
                 configs[key] = value
         return configs
+
+    def _expand_vars(self, configs):
+        """Expand dynamic placeholders in string config values in-place."""
+        today = date.today()
+        subs = {
+            '$YEAR': str(today.year),
+            '$MONTH': today.strftime('%m'),
+            '$DAY': today.strftime('%d'),
+            '$USERNAME': getpass.getuser(),
+            '$PROJECTNAME': self.project_slug,
+        }
+        for key, value in configs.items():
+            if isinstance(value, str):
+                for placeholder, replacement in subs.items():
+                    configs[key] = configs[key].replace(placeholder, replacement)
 
     def finalize_configs(self, configs):
         """Collapse s3_path_prefix/s3_path_suffix into s3_path; these are transient plugin-level keys that must not persist."""

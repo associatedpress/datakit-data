@@ -1,5 +1,7 @@
+import getpass
 import os
 import pytest
+from datetime import date
 from unittest import mock
 
 from conftest import (
@@ -135,6 +137,70 @@ def test_s3_path_prefix_and_suffix(dkit_home, fake_project):
     assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project/data'
     assert 's3_path_prefix' not in cmd.project_configs
     assert 's3_path_suffix' not in cmd.project_configs
+
+
+def test_dynamic_year_expansion(dkit_home, fake_project):
+    """
+    $YEAR in plugin-level config values is expanded to the current year when writing project config.
+    """
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_prefix': 'projects/$YEAR',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    parsed_args = mock.Mock()
+    cmd.run(parsed_args)
+    expected_year = str(date.today().year)
+    assert cmd.project_configs['s3_path'] == f'projects/{expected_year}/fake-project'
+
+
+def test_dynamic_month_day_expansion(dkit_home, fake_project):
+    """
+    $MONTH and $DAY in plugin-level config values are expanded to zero-padded current values.
+    """
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_prefix': '$YEAR/$MONTH/$DAY',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    cmd.run(mock.Mock())
+    today = date.today()
+    expected_prefix = f"{today.year}/{today.strftime('%m')}/{today.strftime('%d')}"
+    assert cmd.project_configs['s3_path'] == f'{expected_prefix}/fake-project'
+
+
+def test_dynamic_username_expansion(dkit_home, fake_project):
+    """
+    $USERNAME in plugin-level config values is expanded to the system username.
+    """
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_prefix': 'users/$USERNAME',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    cmd.run(mock.Mock())
+    assert cmd.project_configs['s3_path'] == f'users/{getpass.getuser()}/fake-project'
+
+
+def test_dynamic_projectname_expansion(dkit_home, fake_project):
+    """
+    $PROJECTNAME in plugin-level config values is expanded to the current directory name.
+    """
+    plugin_configs = {
+        's3_bucket': 'data.ap.org',
+        's3_path_suffix': 'raw/$PROJECTNAME',
+        'aws_user_profile': 'ap'
+    }
+    create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    cmd.run(mock.Mock())
+    assert cmd.project_configs['s3_path'] == 'fake-project/raw/fake-project'
 
 
 def test_preexisting_project_configs_honored(fake_project):
