@@ -25,15 +25,11 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert 'Initializing project' in caplog.text
 
     # Test default configs initialized
-    assert cmd.project_configs['aws_user_profile'] == 'default'
-    assert cmd.project_configs['s3_bucket'] == ''
-    assert cmd.project_configs['s3_path'] == 'fake-project'
-
-    # Test default configs initialized
     project_configs = read_json(cmd.project_config_path)
     assert project_configs['aws_user_profile'] == 'default'
     assert project_configs['s3_bucket'] == ''
     assert project_configs['s3_path'] == 'fake-project'
+    assert project_configs['sync_status_location'] == '.sync_status/'
 
 
 def test_plugin_configs_not_initialized(dkit_home):
@@ -62,7 +58,7 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
     cmd.run(parsed_args)
-    assert cmd.project_configs == plugin_configs
+    assert cmd.project_configs == {**plugin_configs, 'sync_status_location': '.sync_status/'}
     assert 'datakit-data' in dir_contents(dkit_home)
     assert 'fake-project' not in dir_contents(dkit_home)
     assert os.path.exists(cmd.plugin_config_path)

@@ -12,7 +12,8 @@ class ProjectMixin:
         return {
             'aws_user_profile': 'default',
             's3_bucket': '',
-            's3_path': self.project_slug
+            's3_path': self.project_slug,
+            'sync_status_location': '.sync_status/'
         }
 
     @property

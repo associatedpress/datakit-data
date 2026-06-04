@@ -3,6 +3,8 @@ import os
 from cliff.command import Command
 from datakit import CommandHelpers
 
+from datakit.utils import write_json
+
 from ..extra_flags import ExtraFlags
 from ..project_mixin import ProjectMixin
 from ..s3 import S3
@@ -17,8 +19,13 @@ class Push(ProjectMixin, CommandHelpers, Command):
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,
-            help="One or more boolean S3 sync flags" +
-            " without leading dashes, e.g. delete or dryrun"
+            help="One or more boolean S3 sync flags without leading dashes, e.g. delete or dryrun"
+        )
+        parser.add_argument(
+            '--sync-status-in-data',
+            action='store_true',
+            default=False,
+            help="Create sync status files in data/ instead of the configured location"
         )
         return parser
 
@@ -33,8 +40,16 @@ class Push(ProjectMixin, CommandHelpers, Command):
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
+        if parsed_args.sync_status_in_data:
+            sync_status_dir = 'data/'
+            configs = self.project_configs.copy()
+            configs['sync_status_location'] = 'data/'
+            write_json(self.project_config_path, configs)
+        else:
+            sync_status_dir = self.project_configs.get('sync_status_location')
         s3.push(
             'data/',
             self.project_configs['s3_path'],
-            extra_flags=clean_flags
+            extra_flags=clean_flags,
+            sync_status_dir=sync_status_dir
         )

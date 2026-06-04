@@ -38,7 +38,8 @@ The `data init` command creates:
     {
       "aws_user_profile": "default",
       "s3_bucket": "",
-      "s3_path": "my-project"
+      "s3_path": "my-project",
+      "sync_status_location": ".sync_status/"
     }
 
 
@@ -68,6 +69,12 @@ These configurations can be found in `config/datakit-data.json`:
 **s3_path**
   The S3 bucket path to which the local `data/` directory should be mapped. By default, `datakit-data`
   maps the local `data/` directory to a folder named after the project's root folder.
+
+**sync_status_location**
+  Local path to where the plugin stores sync status files. For each file pushed to s3, a corresponding
+  `<filename>.synced` file is created to mark that it has successfully been uploaded. By default this
+  is `.sync_status/`, but tracking files can also be generated side-by-side with the originals by
+  setting this to `data/`
 
 
 Default configurations

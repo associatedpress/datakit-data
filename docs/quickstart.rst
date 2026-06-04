@@ -21,7 +21,8 @@ Edit `config/datakit-data.json`::
     {
       "aws_user_profile": "default",
       "s3_bucket": "",
-      "s3_path": "my-project"
+      "s3_path": "my-project",
+      "sync_status_location": ".sync_status/"
     }
 
 Drop data files in project data directory::

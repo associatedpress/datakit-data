@@ -24,6 +24,7 @@ Homepage = "https://github.com/associatedpress/datakit-data"
 "data init" = "datakit_data:Init"
 "data push" = "datakit_data:Push"
 "data pull" = "datakit_data:Pull"
+"data status" = "datakit_data:Status"
 
 [dependency-groups]
 dev = [
