@@ -66,6 +66,41 @@ def test_no_data_dir(caplog):
     assert '0 file(s) modified since last push' in caplog.text
 
 
+def test_last_push_time_never(caplog):
+    """
+    Status shows 'never' when no .synced files exist.
+    """
+    run_status()
+    assert 'Last pushed: never' in caplog.text
+
+
+def test_last_push_time_shown(caplog, fake_project):
+    """
+    Status shows the mtime of the most recent .synced file as last pushed time.
+    """
+    mtime = 1700000000
+    _make_file(os.path.join(fake_project, '.sync_status', 'foo.csv.synced'), mtime=mtime)
+    run_status()
+    expected = datetime.fromtimestamp(mtime).astimezone().strftime('%Y-%m-%d %H:%M:%S')
+    assert 'Last pushed: ' in caplog.text
+    assert expected in caplog.text
+
+
+def test_last_push_time_uses_most_recent(caplog, fake_project):
+    """
+    Status uses the most recently modified .synced file for the last pushed time.
+    """
+    older_mtime = 1700000000
+    newer_mtime = 1700003600
+    _make_file(os.path.join(fake_project, '.sync_status', 'older.csv.synced'), mtime=older_mtime)
+    _make_file(os.path.join(fake_project, '.sync_status', 'newer.csv.synced'), mtime=newer_mtime)
+    run_status()
+    expected = datetime.fromtimestamp(newer_mtime).astimezone().strftime('%Y-%m-%d %H:%M:%S')
+    assert expected in caplog.text
+    older_str = datetime.fromtimestamp(older_mtime).astimezone().strftime('%Y-%m-%d %H:%M:%S')
+    assert older_str not in caplog.text
+
+
 def test_all_files_unsynced(caplog, fake_project):
     """
     Files with no corresponding .synced marker are counted as not yet pushed to S3.
@@ -212,6 +247,18 @@ def _run_status_all(mocker, local_files, s3_objects, filepaths=False):
     mocker.patch.object(S3, '_list_s3_objects', return_value=s3_objects)
     mocker.patch.object(S3, '_client', return_value=mock.Mock())
     run_status(scan_all=True, filepaths=filepaths)
+
+
+def test_all_shows_last_push_time(caplog, mocker, fake_project):
+    """
+    --all mode also displays the last pushed time from .synced markers.
+    """
+    mtime = 1700000000
+    _make_file(os.path.join(fake_project, '.sync_status', 'foo.csv.synced'), mtime=mtime)
+    _run_status_all(mocker, {}, {})
+    expected = datetime.fromtimestamp(mtime).astimezone().strftime('%Y-%m-%d %H:%M:%S')
+    assert 'Last pushed: ' in caplog.text
+    assert expected in caplog.text
 
 
 def test_all_local_only(caplog, mocker):

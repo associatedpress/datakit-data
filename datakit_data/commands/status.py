@@ -31,6 +31,12 @@ class Status(ProjectMixin, CommandHelpers, Command):
         if not os.path.exists("config/datakit-data.json"):
             self.log.info("No config file found - have you run `datakit data init`?")
             return
+        sync_status_dir = self.project_configs.get('sync_status_location')
+        last_push = self._last_push_time(sync_status_dir) if sync_status_dir else None
+        if last_push:
+            self.log.info(f"Last pushed: {last_push.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+        else:
+            self.log.info("Last pushed: never")
         if getattr(parsed_args, 'all', False):
             bucket = self.project_configs['s3_bucket']
             if bucket == "":
@@ -43,7 +49,6 @@ class Status(ProjectMixin, CommandHelpers, Command):
                 filepaths=parsed_args.filepaths,
             )
             return
-        sync_status_dir = self.project_configs.get('sync_status_location')
         if not sync_status_dir:
             self.log.info("No sync_status_location configured")
             return
@@ -80,6 +85,18 @@ class Status(ProjectMixin, CommandHelpers, Command):
         if filepaths:
             for path in paths:
                 self.log.info(f"  {path}")
+
+    def _last_push_time(self, sync_status_dir):
+        if not os.path.isdir(sync_status_dir):
+            return None
+        latest = None
+        for root, _, filenames in os.walk(sync_status_dir):
+            for filename in filenames:
+                if filename.endswith('.synced'):
+                    mtime = os.path.getmtime(os.path.join(root, filename))
+                    if latest is None or mtime > latest:
+                        latest = mtime
+        return datetime.fromtimestamp(latest).astimezone() if latest is not None else None
 
     def _find_unsynced(self, data_dir, sync_status_dir):
         missing = []
