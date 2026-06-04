@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "datakit-data"
-version = "0.5.0"
+version = "0.5.1"
 description = "A datakit plugin to manage data assets on AWS S3."
 authors = [
     {name = "Larry Fenn", email = "lfenn@ap.org"},
