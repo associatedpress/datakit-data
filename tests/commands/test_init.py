@@ -76,7 +76,8 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
     # Iniitalize project
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(parsed_args)
     assert cmd.project_configs == {**plugin_configs, 'sync_status_location': '.sync_status/'}
     assert 'datakit-data' in dir_contents(dkit_home)
     assert 'fake-project' not in dir_contents(dkit_home)
@@ -96,7 +97,8 @@ def test_s3_path_prefix(dkit_home, fake_project):
     # Iniitalize project
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project'
     assert 's3_path_prefix' not in cmd.project_configs
 
@@ -114,7 +116,8 @@ def test_s3_path_suffix(dkit_home, fake_project):
     # Iniitalize project
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'fake-project/data'
     assert 's3_path_suffix' not in cmd.project_configs
 
@@ -133,7 +136,8 @@ def test_s3_path_prefix_and_suffix(dkit_home, fake_project):
     # Iniitalize project
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(parsed_args)
     assert cmd.project_configs['s3_path'] == 'projects/2017/fake-project/data'
     assert 's3_path_prefix' not in cmd.project_configs
     assert 's3_path_suffix' not in cmd.project_configs
@@ -151,7 +155,8 @@ def test_dynamic_year_expansion(dkit_home, fake_project):
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(parsed_args)
     expected_year = str(date.today().year)
     assert cmd.project_configs['s3_path'] == f'projects/{expected_year}/fake-project'
 
@@ -167,7 +172,8 @@ def test_dynamic_month_day_expansion(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     cmd = Init(mock.Mock(), None, cmd_name='data init')
-    cmd.run(mock.Mock())
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(mock.Mock())
     today = date.today()
     expected_prefix = f"{today.year}/{today.strftime('%m')}/{today.strftime('%d')}"
     assert cmd.project_configs['s3_path'] == f'{expected_prefix}/fake-project'
@@ -184,7 +190,8 @@ def test_dynamic_username_expansion(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     cmd = Init(mock.Mock(), None, cmd_name='data init')
-    cmd.run(mock.Mock())
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(mock.Mock())
     assert cmd.project_configs['s3_path'] == f'users/{getpass.getuser()}/fake-project'
 
 
@@ -199,7 +206,8 @@ def test_dynamic_projectname_expansion(dkit_home, fake_project):
     }
     create_plugin_config(dkit_home, 'datakit-data', plugin_configs)
     cmd = Init(mock.Mock(), None, cmd_name='data init')
-    cmd.run(mock.Mock())
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(mock.Mock())
     assert cmd.project_configs['s3_path'] == 'fake-project/raw/fake-project'
 
 
@@ -216,3 +224,63 @@ def test_preexisting_project_configs_honored(fake_project):
     assert proj_configs['aws_user_profile'] == 'user2'
     assert 's3_bucket' not in proj_configs
     assert 's3_path' not in proj_configs
+
+
+def test_no_sync_status_location_in_system_config_warns(dkit_home, fake_project, capsys):
+    """
+    Init warns when system config exists but lacks sync_status_location.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+    })
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(mock.Mock())
+    out = capsys.readouterr().out
+    assert 'sync_status_location' in out
+    assert 'status' in out
+
+
+def test_no_sync_status_location_in_system_config_offers_to_add_yes(dkit_home, fake_project):
+    """
+    When system config lacks sync_status_location and user answers yes, it is added to system config.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+    })
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', return_value='y'):
+        cmd.run(mock.Mock())
+    from datakit.utils import read_json
+    assert read_json(cmd.plugin_config_path)['sync_status_location'] == '.sync_status/'
+
+
+def test_no_sync_status_location_in_system_config_offers_to_add_no(dkit_home, fake_project):
+    """
+    When system config lacks sync_status_location and user answers no, system config is unchanged.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+    })
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', return_value='n'):
+        cmd.run(mock.Mock())
+    from datakit.utils import read_json
+    assert 'sync_status_location' not in read_json(cmd.plugin_config_path)
+
+
+def test_no_prompt_when_sync_status_location_already_in_system_config(dkit_home, fake_project):
+    """
+    Init does not prompt about sync_status_location when it is already in the system config.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+        'sync_status_location': '.sync_status/',
+    })
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', side_effect=AssertionError("input should not be called")):
+        cmd.run(mock.Mock())

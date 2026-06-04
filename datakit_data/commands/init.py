@@ -40,6 +40,13 @@ class Init(ProjectMixin, CommandHelpers, Command):
                 print(f"\nThere is an issue with {self.plugin_config_path}: `s3_bucket` is missing or empty.")
                 print("Please review and update the file, then re-run `data init`.")
                 raise SystemExit(1)
+            if not plugin_configs.get('sync_status_location'):
+                print(f"\n`sync_status_location` is not configured in {self.plugin_config_path}.")
+                print("Without it, the `status` command will be non-functional for newly created projects.")
+                answer = input("Add sync_status_location = '.sync_status/' to system config? [Y/n]: ").strip().lower()
+                if answer in ('', 'y', 'yes'):
+                    plugin_configs['sync_status_location'] = '.sync_status/'
+                    self.write_configs(plugin_configs)
         else:
             print(f"\nNo system configuration for datakit-data exists at {self.plugin_config_path}.")
             plugin_configs = self._prompt_for_plugin_configs()

@@ -2,6 +2,7 @@ import os
 from datetime import datetime, timezone
 from cliff.command import Command
 from datakit import CommandHelpers
+from datakit.utils import read_json, write_json
 
 from ..project_mixin import ProjectMixin
 from ..s3 import S3
@@ -51,6 +52,12 @@ class Status(ProjectMixin, CommandHelpers, Command):
             return
         if not sync_status_dir:
             self.log.info("No sync_status_location configured")
+            answer = input("\nAdd sync_status_location = '.sync_status/' to project config? [Y/n]: ").strip().lower()
+            if answer in ('', 'y', 'yes'):
+                configs = read_json(self.project_config_path)
+                configs['sync_status_location'] = '.sync_status/'
+                write_json(self.project_config_path, configs)
+                self.log.info("Added sync_status_location to config/datakit-data.json")
             return
         missing, stale = self._find_unsynced('data/', sync_status_dir)
         self._log_group("file(s) not yet pushed to S3", missing, parsed_args.filepaths)

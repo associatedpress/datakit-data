@@ -53,8 +53,43 @@ def test_no_sync_status_location(caplog, fake_project):
         's3_path': '2017/fake-project',
         'aws_user_profile': 'ap',
     })
-    run_status()
+    with mock.patch('builtins.input', return_value='n'):
+        run_status()
     assert 'No sync_status_location configured' in caplog.text
+
+
+def test_no_sync_status_location_offers_to_add_yes(caplog, fake_project):
+    """
+    When sync_status_location is absent and user answers yes, it is added to project config.
+    """
+    from datakit.utils import read_json
+    create_project_config(fake_project, {
+        's3_bucket': 'foo.org',
+        's3_path': '2017/fake-project',
+        'aws_user_profile': 'ap',
+    })
+    with mock.patch('builtins.input', return_value='y'):
+        run_status()
+    assert 'No sync_status_location configured' in caplog.text
+    config_path = os.path.join(fake_project, 'config', 'datakit-data.json')
+    assert read_json(config_path)['sync_status_location'] == '.sync_status/'
+
+
+def test_no_sync_status_location_offers_to_add_no(caplog, fake_project):
+    """
+    When sync_status_location is absent and user answers no, project config is unchanged.
+    """
+    from datakit.utils import read_json
+    original = {
+        's3_bucket': 'foo.org',
+        's3_path': '2017/fake-project',
+        'aws_user_profile': 'ap',
+    }
+    create_project_config(fake_project, original)
+    with mock.patch('builtins.input', return_value='n'):
+        run_status()
+    config_path = os.path.join(fake_project, 'config', 'datakit-data.json')
+    assert 'sync_status_location' not in read_json(config_path)
 
 
 def test_no_data_dir(caplog):
