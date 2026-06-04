@@ -32,16 +32,39 @@ class Init(ProjectMixin, CommandHelpers, Command):
     def create_project_config(self):
         if os.path.exists(self.project_config_path):
             return
-        try:
+        if os.path.exists(self.plugin_config_path):
             plugin_configs = read_json(self.plugin_config_path)
-        except FileNotFoundError:
-            plugin_configs = {}
-            self.log.info(f"No user level config found at {self.plugin_config_path}, empty config created!")
-            self.log.info("You will need to fill out config/datakit-data.json manually")
+            if not plugin_configs.get('s3_bucket'):
+                print(f"\nThere is an issue with {self.plugin_config_path}: `s3_bucket` is missing or empty.")
+                print("Please review and update the file, then re-run `data init`.")
+                raise SystemExit(1)
+        else:
+            print(f"\nNo system configuration for datakit-data exists at {self.plugin_config_path}.")
+            plugin_configs = self._prompt_for_plugin_configs()
+            self.write_configs(plugin_configs)
         to_write = self.default_configs.copy()
         to_write.update(plugin_configs)
         self.finalize_configs(to_write)
         write_json(self.project_config_path, to_write)
+
+    def _prompt_for_plugin_configs(self):
+        print("Please provide the following configuration values (press Enter to use the default):\n")
+        configs = {}
+        fields = [
+            ('s3_bucket', 'S3 bucket name', None),
+            ('aws_user_profile', 'AWS user profile', 'default'),
+            ('s3_path_prefix', 'S3 path prefix', None),
+            ('s3_path_suffix', 'S3 path suffix', None),
+            ('sync_status_location', 'Sync status location', '.sync_status/'),
+        ]
+        for key, label, default in fields:
+            prompt = f"  {label} [{default}]: " if default else f"  {label}: "
+            value = input(prompt).strip()
+            if not value and default:
+                value = default
+            if value:
+                configs[key] = value
+        return configs
 
     def finalize_configs(self, configs):
         """Collapse s3_path_prefix/s3_path_suffix into s3_path; these are transient plugin-level keys that must not persist."""

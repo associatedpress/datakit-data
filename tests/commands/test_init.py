@@ -1,4 +1,5 @@
 import os
+import pytest
 from unittest import mock
 
 from conftest import (
@@ -13,34 +14,50 @@ from datakit_data import Init
 
 def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     """
-    Init should auto-generate directories and project-level config file.
+    Init should auto-generate directories and project-level config file,
+    prompting for plugin-level config when none exists.
     """
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
+    with mock.patch('builtins.input', side_effect=['test-bucket', '', '', '', '']):
+        cmd.run(parsed_args)
     contents = dir_contents(tmpdir.strpath)
     assert 'data' in contents
     assert 'config' in contents
     assert os.path.exists(os.path.join(fake_project, 'data/.gitkeep'))
     assert 'Initializing project' in caplog.text
 
-    # Test default configs initialized
+    # Test configs initialized from prompted values
     project_configs = read_json(cmd.project_config_path)
     assert project_configs['aws_user_profile'] == 'default'
-    assert project_configs['s3_bucket'] == ''
+    assert project_configs['s3_bucket'] == 'test-bucket'
     assert project_configs['s3_path'] == 'fake-project'
     assert project_configs['sync_status_location'] == '.sync_status/'
 
 
-def test_plugin_configs_not_initialized(dkit_home):
+def test_creates_plugin_config_via_prompts(dkit_home, fake_project):
     """
-    Init should NOT auto-generate plugin-level configurations.
+    When no plugin-level config exists, Init should prompt the user and create one.
     """
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     parsed_args = mock.Mock()
-    cmd.run(parsed_args)
-    # Guard against auto-generation of plugin-level configs
-    assert not os.path.exists(cmd.plugin_config_path)
+    with mock.patch('builtins.input', side_effect=['my-bucket', 'my-profile', '', '', '']):
+        cmd.run(parsed_args)
+    assert os.path.exists(cmd.plugin_config_path)
+    plugin_configs = read_json(cmd.plugin_config_path)
+    assert plugin_configs['s3_bucket'] == 'my-bucket'
+    assert plugin_configs['aws_user_profile'] == 'my-profile'
+
+
+def test_missing_s3_bucket_exits_with_error(dkit_home, fake_project):
+    """
+    If plugin config exists but s3_bucket is missing or empty, init should exit with an error.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {'aws_user_profile': 'ap'})
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    parsed_args = mock.Mock()
+    with pytest.raises(SystemExit):
+        cmd.run(parsed_args)
 
 
 def test_inherit_plugin_level_configs(dkit_home, fake_project):
