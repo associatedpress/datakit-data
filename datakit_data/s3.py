@@ -9,13 +9,7 @@ logger.addHandler(NullHandler())
 
 
 class S3:
-    """
-    A limited, human-friendly interface to S3.
-
-    :param aws_user_profile: From ~/.aws/credentials
-    :param bucket: S3 bucket URL
-
-    """
+    """A limited, human-friendly interface to S3."""
 
     def __init__(self, aws_user_profile, s3_bucket):
         self.user_profile = aws_user_profile

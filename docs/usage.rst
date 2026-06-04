@@ -103,10 +103,12 @@ to help customize the generation of the S3 path across projects.
 at any point by editing `config/datakit-data.json` for a given project.
 
 **s3_path_prefix**
-  one or more directory levels to be **prepended** to a project config's S3 path
+  one or more directory levels to be **prepended** to a project config's S3 path, no
+  trailing slash
 
 **s3_path_suffix**
-  one or more directory levels to be **appended** to a project config's S3 path
+  one or more directory levels to be **appended** to a project config's S3 path, no trailing
+  slash
 
 
 The prefix/suffix settings are useful when project data
@@ -115,7 +117,7 @@ S3 bucket.
 
 For example, to store data in an S3 bucket at the following path::
 
-  projects/2017/my-project
+  projects/2017/my-project/
 
 ..you would set **s3_path_prefix** to *projects/2017*. This path would then be
 prepended to the project's name in the *s3_path* configuration whenever a new 
@@ -124,13 +126,13 @@ project is initialized.
 Similarly, you can segregate data assets inside of a project directory on S3
 by using the **s3_path_suffix**. For example, to store data at the below path::
 
-  my-project/data
+  my-project/data/
 
-...you would set **s3_path_suffix** to *data/*.
+...you would set **s3_path_suffix** to *data*.
 
 And of course, you can use both of these settings in tandem::
 
-  projects/2017/my-project/data
+  projects/2017/my-project/data/
 
 
 Data push/pull
@@ -150,7 +152,7 @@ Pushing and pulling data between your local machine and the S3 data store requir
     $ datakit data pull
 
 
-The above commands provide a human-friendly interface to the `AWS S3 sync`_ commmand line utility.
+The above commands provide a human-friendly interface to the `AWS S3 sync`_ command and line utility.
 
 The sync utility writes all files in a project's  local `data/` directory (and its subdirectories) to the
 S3 bucket and path specified in `config/datakit-data.json`, or vice versa.
@@ -221,5 +223,5 @@ the `data/` directory itself *should be excluded from version control.*
 .. _`.gitignore`: https://git-scm.com/docs/gitignore
 
 .. [1] datakit-data does not currently guard against overwrites of pre-existing projects of the same name.
-.. [2] Leading slashes must be dropped to enable datakit to differentiate between its own flags and those intended for
+.. [2] Leading dashes must be dropped to enable datakit to differentiate between its own flags and those intended for
    pass-through to the underlying AWS S3 sync utility.

@@ -5,8 +5,6 @@ from datakit.utils import read_json
 
 class ProjectMixin:
 
-    "Mixin with code useful across plugin commands"
-
     plugin_slug = 'datakit-data'
 
     @property

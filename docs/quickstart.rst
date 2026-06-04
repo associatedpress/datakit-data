@@ -4,8 +4,12 @@ Quickstart
 Install::
 
 
-  $ sudo pip install datakit-data
+  $ pip install datakit-data
   $ aws configure
+
+If using `uv`, install alongside `datakit-core`::
+
+  $ uv tool install datakit-core --with datakit-data --with ... (other datakit plugins)
 
 Initialize project for use with S3::
 

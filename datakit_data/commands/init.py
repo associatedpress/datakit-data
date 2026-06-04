@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import os
 
 from cliff.command import Command
@@ -23,19 +22,14 @@ class Init(ProjectMixin, CommandHelpers, Command):
 
     def take_action(self, parsed_args):
         self.log.info("Initializing project for S3 data integration...")
-        dirs_to_create = ['data', 'config']
-        [mkdir_p(directory) for directory in dirs_to_create]
+        for directory in ['data', 'config']:
+            mkdir_p(directory)
         open('data/.gitkeep', 'w').close()
         self.log.info("Created data/ directory")
         self.create_project_config()
         self.log.info("Created config/datakit-data.json")
 
     def create_project_config(self):
-        """Create project config if they don't already exist.
-
-        Plugin-level configs, if configured, will override project defaults.
-
-        """
         if os.path.exists(self.project_config_path):
             return
         try:
@@ -50,15 +44,9 @@ class Init(ProjectMixin, CommandHelpers, Command):
         write_json(self.project_config_path, to_write)
 
     def finalize_configs(self, configs):
-        prefix = self.pop_key(configs, 's3_path_prefix')
-        suffix = self.pop_key(configs, 's3_path_suffix')
-        s3_path = configs['s3_path']
-        bits = [bit for bit in [prefix, s3_path, suffix] if bit.strip()]
+        """Collapse s3_path_prefix/s3_path_suffix into s3_path; these are transient plugin-level keys that must not persist."""
+        prefix = configs.pop('s3_path_prefix', '')
+        suffix = configs.pop('s3_path_suffix', '')
+        bits = [bit for bit in [prefix, configs['s3_path'], suffix] if bit.strip()]
         if bits:
             configs['s3_path'] = os.path.join(*bits)
-
-    def pop_key(self, config, name):
-        try:
-            return config.pop(name)
-        except KeyError:
-            return ''

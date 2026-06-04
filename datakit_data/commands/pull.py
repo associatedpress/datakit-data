@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import argparse
 import os
 from cliff.command import Command
@@ -18,8 +17,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,
-            help="One or more boolean S3 sync flags" +
-            " without leading dashes, e.g. delete or dryrun"
+            help="One or more boolean S3 sync flags without leading dashes, e.g. delete or dryrun"
         )
         return parser
 
@@ -31,7 +29,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
             return
         if bucket == "":
             self.log.info("No bucket specified in config - no data pushed")
-            return        
+            return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
         s3.pull(

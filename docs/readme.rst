@@ -8,9 +8,6 @@ Overview
 .. image:: https://img.shields.io/pypi/v/datakit-data.svg
         :target: https://pypi.python.org/pypi/datakit-data
 
-.. image:: https://img.shields.io/travis/associatedpress/datakit-data.svg
-        :target: https://travis-ci.org/associatedpress/datakit-data
-
 .. image:: http://readthedocs.org/projects/datakit-data/badge/?version=latest
    :target: https://datakit-data.readthedocs.io/en/latest/
    :alt: Documentation Status

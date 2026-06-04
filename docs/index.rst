@@ -14,6 +14,7 @@ Contents:
    authors
    credits
    history
+   modules
 
 Indices and tables
 ==================
