@@ -69,6 +69,9 @@ def test_inherit_plugin_level_configs(dkit_home, fake_project):
 
 
 def test_s3_path_prefix(dkit_home, fake_project):
+    """
+    s3_path_prefix is prepended to the project slug and collapsed into s3_path.
+    """
     plugin_configs = {
         's3_bucket': 'data.ap.org',
         's3_path_prefix': 'projects/2017',
@@ -84,6 +87,9 @@ def test_s3_path_prefix(dkit_home, fake_project):
 
 
 def test_s3_path_suffix(dkit_home, fake_project):
+    """
+    s3_path_suffix is appended to the project slug and collapsed into s3_path.
+    """
     plugin_configs = {
         's3_bucket': 'data.ap.org',
         's3_path_suffix': 'data',
@@ -99,6 +105,9 @@ def test_s3_path_suffix(dkit_home, fake_project):
 
 
 def test_s3_path_prefix_and_suffix(dkit_home, fake_project):
+    """
+    Both s3_path_prefix and s3_path_suffix are applied and collapsed into a single s3_path.
+    """
     plugin_configs = {
         's3_bucket': 'data.ap.org',
         's3_path_prefix': 'projects/2017',

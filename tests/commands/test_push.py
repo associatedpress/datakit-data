@@ -55,6 +55,9 @@ def test_push_invocation(mocker):
 
 
 def test_boolean_cli_flags(mocker):
+    """
+    Remainder CLI args are prefixed with '--' and forwarded to S3.push.
+    """
     push_mock = mocker.patch(
         'datakit_data.commands.push.S3.push',
         autospec=True,
@@ -88,6 +91,9 @@ def test_no_config_file(caplog):
 
 
 def test_empty_bucket(caplog, fake_project):
+    """
+    Push logs a warning when no S3 bucket is configured.
+    """
     create_project_config(fake_project, {
         'aws_user_profile': 'ap',
         's3_bucket': '',

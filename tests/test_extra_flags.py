@@ -8,6 +8,9 @@ from datakit_data.extra_flags import ExtraFlags
     [["dryrun", "delete"], ["--dryrun", "--delete"]]
 ])
 def test_boolean_conversion(flags):
+    """
+    ExtraFlags.convert prefixes each flag name with '--'.
+    """
     actual = ExtraFlags.convert(flags[0])
     expected = flags[1]
     assert actual == expected

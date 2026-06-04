@@ -12,7 +12,7 @@ authors = [
 license = {text = "ISC"}
 requires-python = ">=3.10"
 dependencies = [
-    "awscli",
+    "boto3",
     "cliff",
     "datakit-core>=0.2.1",
 ]
