@@ -1,5 +1,6 @@
 __author__ = """Larry Fenn"""
 __email__ = 'lfenn@ap.org'
+__version__ = '0.4.0'
 
 from .commands.init import Init
 from .commands.push import Push
