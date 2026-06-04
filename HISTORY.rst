@@ -2,6 +2,14 @@
 History
 =======
 
+0.5.0 (2026-06-04)
+------------------
+
+* `boto3` used instead of `awscli`
+* `status` command added along with tracking date and time of last push
+* Better handling of missing system config
+* Dynamic variables in system config supported
+
 0.4.0 (2026-06-03)
 ------------------
 

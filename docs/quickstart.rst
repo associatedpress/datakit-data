@@ -16,15 +16,6 @@ Initialize project for use with S3::
   $ cd /path/to/my-project
   $ datakit data init
 
-Edit `config/datakit-data.json`::
-
-    {
-      "aws_user_profile": "default",
-      "s3_bucket": "",
-      "s3_path": "my-project",
-      "sync_status_location": ".sync_status/"
-    }
-
 Drop data files in project data directory::
 
   $ touch data/foo.csv

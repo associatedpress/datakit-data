@@ -18,7 +18,6 @@ Integrating a project with S3 involves a few steps:
 * Exclude the project's `data/` directory from version control (see :ref:`usage-vcs--and-data`).
 
 
-
 .. _usage-init:
 
 Initialize
@@ -122,11 +121,17 @@ The prefix/suffix settings are useful when project data
 must be stored somewhere other than a project directory at the root of an
 S3 bucket.
 
+The following dynamic variables are supported:
+
+* `$YEAR`, `$MONTH`, `$DAY` -- expanded based on system time
+* `$USERNAME` -- expanded based on result of `getpass.getuser()`
+* `$PROJECTNAME` -- expanded based on project slug
+
 For example, to store data in an S3 bucket at the following path::
 
-  projects/2017/my-project/
+  projects/<current_year>/my-project/
 
-..you would set **s3_path_prefix** to *projects/2017*. This path would then be
+..you would set **s3_path_prefix** to *projects/$YEAR*. This path would then be
 prepended to the project's name in the *s3_path* configuration whenever a new 
 project is initialized.
 
