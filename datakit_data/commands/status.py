@@ -1,11 +1,15 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from cliff.command import Command
 from datakit import CommandHelpers
 from datakit.utils import read_json, write_json
 
 from ..project_mixin import ProjectMixin
 from ..s3 import S3
+
+# Tolerance for clock skew when comparing a local .synced marker (our last-push time)
+# against an object's S3 LastModified, which is stamped by S3's clock.
+SYNC_WINDOW = timedelta(seconds=2)
 
 
 class Status(ProjectMixin, CommandHelpers, Command):
@@ -47,6 +51,7 @@ class Status(ProjectMixin, CommandHelpers, Command):
                 self.project_configs['aws_user_profile'],
                 bucket,
                 self.project_configs['s3_path'],
+                sync_status_dir,
                 filepaths=parsed_args.filepaths,
             )
             return
@@ -63,7 +68,7 @@ class Status(ProjectMixin, CommandHelpers, Command):
         self._log_group("file(s) not yet pushed to S3", missing, parsed_args.filepaths)
         self._log_group("file(s) modified since last push", stale, parsed_args.filepaths)
 
-    def _report_s3_comparison(self, user_profile, bucket, s3_path, filepaths=False):
+    def _report_s3_comparison(self, user_profile, bucket, s3_path, sync_status_dir, filepaths=False):
         s3 = S3(user_profile, bucket)
         client = s3._client()
         prefix = s3._normalize_prefix(s3_path)
@@ -74,18 +79,45 @@ class Status(ProjectMixin, CommandHelpers, Command):
         s3_keys = set(s3_objects)
         only_local = sorted(local_keys - s3_keys)
         only_s3 = sorted(s3_keys - local_keys)
-        newer_local = []
-        newer_s3 = []
+        changed_local = []
+        changed_s3 = []
+        conflict = []
+        differ = []
         for rel_path in local_keys & s3_keys:
-            local_dt = datetime.fromtimestamp(os.path.getmtime(local_files[rel_path]), tz=timezone.utc)
-            if local_dt > s3_objects[rel_path]:
-                newer_local.append(rel_path)
-            elif s3_objects[rel_path] > local_dt:
-                newer_s3.append(rel_path)
+            local_path = local_files[rel_path]
+            if os.path.getsize(local_path) == s3_objects[rel_path].size:
+                continue  # same byte size: treat as in sync
+            # Sizes differ. Attribute direction using the .synced marker (our last-push time)
+            # rather than comparing local mtime to S3 LastModified, which measure different things.
+            marker_mtime = self._marker_mtime(rel_path, sync_status_dir)
+            if marker_mtime is None:
+                differ.append(rel_path)
+                continue
+            local_mtime = datetime.fromtimestamp(os.path.getmtime(local_path), tz=timezone.utc)
+            local_changed = local_mtime > marker_mtime + SYNC_WINDOW
+            s3_changed = s3_objects[rel_path].last_modified > marker_mtime + SYNC_WINDOW
+            if local_changed and s3_changed:
+                conflict.append(rel_path)
+            elif local_changed:
+                changed_local.append(rel_path)
+            elif s3_changed:
+                changed_s3.append(rel_path)
+            else:
+                differ.append(rel_path)
         self._log_group("file(s) local but not on S3", only_local, filepaths)
         self._log_group("file(s) on S3 but not local", only_s3, filepaths)
-        self._log_group("file(s) newer locally than on S3", sorted(newer_local), filepaths)
-        self._log_group("file(s) newer on S3 than locally", sorted(newer_s3), filepaths)
+        self._log_group("file(s) changed locally since last push", sorted(changed_local), filepaths)
+        self._log_group("file(s) changed on S3 since last push", sorted(changed_s3), filepaths)
+        self._log_group("file(s) changed both locally and on S3 (conflict)", sorted(conflict), filepaths)
+        self._log_group("file(s) differing from S3 (no sync record)", sorted(differ), filepaths)
+
+    def _marker_mtime(self, rel_path, sync_status_dir):
+        if not sync_status_dir:
+            return None
+        marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
+        if not os.path.exists(marker_path):
+            return None
+        return datetime.fromtimestamp(os.path.getmtime(marker_path), tz=timezone.utc)
 
     def _log_group(self, label, paths, filepaths):
         self.log.info(f"{len(paths)} {label}")

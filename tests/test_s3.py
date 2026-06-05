@@ -2,7 +2,7 @@ import os
 
 from botocore.exceptions import ClientError, EndpointConnectionError
 
-from datakit_data.s3 import S3
+from datakit_data.s3 import S3, S3ObjectInfo
 
 
 def test_push(mocker):
@@ -434,8 +434,8 @@ def test_list_s3_objects(mocker):
     mock_client = mock_session.return_value.client.return_value
     mock_paginator = mock_client.get_paginator.return_value
     mock_paginator.paginate.return_value = [{'Contents': [
-        {'Key': '2017/foo', 'LastModified': last_modified},
-        {'Key': '2017/bar', 'LastModified': last_modified},
+        {'Key': '2017/foo', 'LastModified': last_modified, 'Size': 10},
+        {'Key': '2017/bar', 'LastModified': last_modified, 'Size': 20},
     ]}]
 
     s3 = S3('ap', 'foo.org')
@@ -443,7 +443,10 @@ def test_list_s3_objects(mocker):
     result = s3._list_s3_objects(client, '2017/')
 
     mock_paginator.paginate.assert_called_with(Bucket='foo.org', Prefix='2017/')
-    assert result == {'foo': last_modified, 'bar': last_modified}
+    assert result == {
+        'foo': S3ObjectInfo(size=10, last_modified=last_modified),
+        'bar': S3ObjectInfo(size=20, last_modified=last_modified),
+    }
 
 
 def test_list_s3_objects_empty_page(mocker):

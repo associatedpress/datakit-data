@@ -1,5 +1,6 @@
 import os
 import logging
+from collections import namedtuple
 from logging import NullHandler
 
 import boto3
@@ -8,6 +9,9 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(NullHandler())
+
+# Metadata captured per remote object from a list_objects_v2 listing.
+S3ObjectInfo = namedtuple('S3ObjectInfo', ['size', 'last_modified'])
 
 EMPTY_PATH_DELETE_MSG = (
     "\n*** Refusing --delete with an empty s3_path: this would scan and delete "
@@ -148,5 +152,5 @@ class S3:
         for page in paginator.paginate(Bucket=self.bucket, Prefix=prefix):
             for obj in page.get('Contents', []):
                 rel_path = obj['Key'][len(prefix):]
-                objects[rel_path] = obj['LastModified']
+                objects[rel_path] = S3ObjectInfo(size=obj['Size'], last_modified=obj['LastModified'])
         return objects
