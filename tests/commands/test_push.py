@@ -25,9 +25,11 @@ def test_s3_instantiation(mocker):
         'datakit_data.commands.push.S3',
         autospec=True,
     )
+    s3_mock.return_value.push.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
+    parsed_args.sync_status_in_data = False
     cmd.run(parsed_args)
     # S3 instantiated with project-level configs for
     # user profile and bucket
@@ -42,6 +44,7 @@ def test_push_invocation(mocker):
         'datakit_data.commands.push.S3.push',
         autospec=True,
     )
+    push_mock.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -64,6 +67,7 @@ def test_boolean_cli_flags(mocker):
         'datakit_data.commands.push.S3.push',
         autospec=True,
     )
+    push_mock.return_value = 0
     parsed_args = mock.Mock()
     parsed_args.args = ['dryrun']
     parsed_args.sync_status_in_data = False
@@ -100,7 +104,8 @@ def test_sync_status_in_data_writes_config(mocker, fake_project):
         'aws_user_profile': 'ap',
         'sync_status_location': '.sync_status',
     })
-    mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -125,6 +130,7 @@ def test_sync_status_in_data_flag_overrides_config(mocker, fake_project):
         'sync_status_location': '.sync_status',
     })
     push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -150,6 +156,7 @@ def test_push_sync_status_alongside(mocker, fake_project):
         'sync_status_location': 'data/',
     })
     push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -175,6 +182,7 @@ def test_push_sync_status_separate_dir(mocker, fake_project):
         'sync_status_location': '.sync_status',
     })
     push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
     cmd = Push(mock.Mock(), None, 'data push')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -208,6 +216,20 @@ def test_no_sync_status_location_creates_no_synced_files(mocker, fake_project):
         for f in files if f.endswith('.synced')
     ]
     assert synced_files == []
+
+
+def test_push_failures_exit_nonzero(caplog, mocker):
+    """
+    When S3.push reports transfer failures, the command exits non-zero and logs a summary.
+    """
+    push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 2
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    parsed_args.sync_status_in_data = False
+    assert cmd.run(parsed_args) == 1
+    assert '2 file(s) failed to transfer' in caplog.text
 
 
 def test_no_config_file(caplog):

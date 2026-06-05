@@ -32,8 +32,11 @@ class Pull(ProjectMixin, CommandHelpers, Command):
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
-        s3.pull(
+        failures = s3.pull(
             'data/',
             self.project_configs['s3_path'],
             extra_flags=clean_flags
         )
+        if failures:
+            self.log.info(f"{failures} file(s) failed to transfer")
+            return 1

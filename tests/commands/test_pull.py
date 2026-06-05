@@ -25,6 +25,7 @@ def test_s3_instantiation(mocker):
         'datakit_data.commands.pull.S3',
         autospec=True,
     )
+    s3_mock.return_value.pull.return_value = 0
     cmd = Pull(mock.Mock(), None, 'data pull')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -42,6 +43,7 @@ def test_pull_invocation(mocker):
         'datakit_data.commands.pull.S3.pull',
         autospec=True,
     )
+    pull_mock.return_value = 0
     cmd = Pull(mock.Mock(), None, 'data pull')
     parsed_args = mock.Mock()
     parsed_args.args = []
@@ -72,6 +74,7 @@ def test_boolean_cli_flags(mocker):
         'datakit_data.commands.pull.S3.pull',
         autospec=True,
     )
+    pull_mock.return_value = 0
     parsed_args = mock.Mock()
     parsed_args.args = ['dryrun']
     cmd = Pull(mock.Mock(), None, 'data pull')
@@ -82,6 +85,19 @@ def test_boolean_cli_flags(mocker):
         '2017/fake-project',
         extra_flags=['--dryrun']
     )
+
+
+def test_pull_failures_exit_nonzero(caplog, mocker):
+    """
+    When S3.pull reports transfer failures, the command exits non-zero and logs a summary.
+    """
+    pull_mock = mocker.patch('datakit_data.commands.pull.S3.pull', autospec=True)
+    pull_mock.return_value = 3
+    cmd = Pull(mock.Mock(), None, 'data pull')
+    parsed_args = mock.Mock()
+    parsed_args.args = []
+    assert cmd.run(parsed_args) == 1
+    assert '3 file(s) failed to transfer' in caplog.text
 
 
 def test_no_config_file(caplog):

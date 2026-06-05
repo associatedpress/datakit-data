@@ -47,9 +47,12 @@ class Push(ProjectMixin, CommandHelpers, Command):
             write_json(self.project_config_path, configs)
         else:
             sync_status_dir = self.project_configs.get('sync_status_location')
-        s3.push(
+        failures = s3.push(
             'data/',
             self.project_configs['s3_path'],
             extra_flags=clean_flags,
             sync_status_dir=sync_status_dir
         )
+        if failures:
+            self.log.info(f"{failures} file(s) failed to transfer")
+            return 1
