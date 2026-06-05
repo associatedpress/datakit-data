@@ -28,7 +28,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
             self.log.info("No config file found - have you run `datakit data init`?")
             return
         if bucket == "":
-            self.log.info("No bucket specified in config - no data pushed")
+            self.log.info("No bucket specified in config - no data pulled")
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)

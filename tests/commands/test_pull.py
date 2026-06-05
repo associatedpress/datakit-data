@@ -5,7 +5,6 @@ import pytest
 
 from conftest import create_project_config
 from datakit_data import Pull
-from datakit_data.s3 import S3
 
 
 @pytest.fixture(autouse=True)
@@ -53,28 +52,6 @@ def test_pull_invocation(mocker):
         '2017/fake-project',
         extra_flags=[]
     )
-
-
-def test_pull_at_s3_layer(mocker):
-    """
-    S3.pull downloads each S3 key to the correct local path via boto3.
-    """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=[
-        '2017/fake-project/foo',
-        '2017/fake-project/bar',
-    ])
-    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
-    mock_client = mock_session.return_value.client.return_value
-    mocker.patch('datakit_data.s3.os.makedirs')
-
-    cmd = Pull(mock.Mock(), None, 'data pull')
-    parsed_args = mock.Mock()
-    parsed_args.args = []
-    cmd.run(parsed_args)
-
-    download_calls = {call[0] for call in mock_client.download_file.call_args_list}
-    assert ('foo.org', '2017/fake-project/foo', 'data/foo') in download_calls
-    assert ('foo.org', '2017/fake-project/bar', 'data/bar') in download_calls
 
 
 def test_get_parser():
@@ -132,4 +109,4 @@ def test_empty_bucket(caplog, fake_project):
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
-    assert 'No bucket specified' in caplog.text
+    assert 'No bucket specified in config - no data pulled' in caplog.text

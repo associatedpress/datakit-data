@@ -235,4 +235,4 @@ def test_empty_bucket(caplog, fake_project):
     parsed_args = mock.Mock()
     parsed_args.args = []
     cmd.run(parsed_args)
-    assert 'No bucket specified' in caplog.text
+    assert 'No bucket specified in config - no data pushed' in caplog.text
