@@ -22,9 +22,8 @@ on data projects.
 Highlights
 -----------
 
-* Human-friendly commands to push files to S3 and to pull files down
+* Human-friendly commands to push files to S3 and to pull files down without `awscli`
 * Customizable default configs to help rapidly bootstrap new projects
-* Access to advanced features of underlying AWS command-line utility for power users
 
 Plugin description
 ------------------

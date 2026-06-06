@@ -218,6 +218,43 @@ def test_no_sync_status_location_creates_no_synced_files(mocker, fake_project):
     assert synced_files == []
 
 
+def test_unsupported_flag_warns(caplog, mocker):
+    """
+    An unsupported extra flag is reported and ignored; the push still runs.
+    """
+    push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = mock.Mock()
+    parsed_args.args = ['bogus']
+    parsed_args.sync_status_in_data = False
+    cmd.run(parsed_args)
+    assert 'Ignoring unsupported flag(s): bogus' in caplog.text
+    push_mock.assert_called_once()
+
+
+def test_sync_status_in_data_dryrun_skips_config_write(mocker, fake_project):
+    """
+    A dry run with --sync-status-in-data does not persist sync_status_location to the config.
+    """
+    create_project_config(fake_project, {
+        's3_bucket': 'foo.org',
+        's3_path': '2017/fake-project',
+        'aws_user_profile': 'ap',
+        'sync_status_location': '.sync_status',
+    })
+    push_mock = mocker.patch('datakit_data.commands.push.S3.push', autospec=True)
+    push_mock.return_value = 0
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = mock.Mock()
+    parsed_args.args = ['dryrun']
+    parsed_args.sync_status_in_data = True
+    cmd.run(parsed_args)
+    from datakit.utils import read_json
+    saved = read_json(os.path.join(fake_project, 'config', 'datakit-data.json'))
+    assert saved['sync_status_location'] == '.sync_status'
+
+
 def test_push_failures_exit_nonzero(caplog, mocker):
     """
     When S3.push reports transfer failures, the command exits non-zero and logs a summary.

@@ -19,7 +19,7 @@ class Push(ProjectMixin, CommandHelpers, Command):
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,
-            help="One or more boolean S3 sync flags without leading dashes, e.g. delete or dryrun"
+            help="One or more boolean flags without leading dashes: delete, dryrun"
         )
         parser.add_argument(
             '--sync-status-in-data',
@@ -40,11 +40,16 @@ class Push(ProjectMixin, CommandHelpers, Command):
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
+        unsupported = ExtraFlags.unsupported(parsed_args.args)
+        if unsupported:
+            self.log.info(f"Ignoring unsupported flag(s): {', '.join(unsupported)}")
+        dryrun = '--dryrun' in clean_flags or '--dry-run' in clean_flags
         if parsed_args.sync_status_in_data:
             sync_status_dir = 'data/'
-            configs = self.project_configs.copy()
-            configs['sync_status_location'] = 'data/'
-            write_json(self.project_config_path, configs)
+            if not dryrun:
+                configs = self.project_configs.copy()
+                configs['sync_status_location'] = 'data/'
+                write_json(self.project_config_path, configs)
         else:
             sync_status_dir = self.project_configs.get('sync_status_location')
         failures = s3.push(

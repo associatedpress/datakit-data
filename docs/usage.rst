@@ -164,37 +164,32 @@ Pushing and pulling data between your local machine and the S3 data store requir
     $ datakit data pull
 
 
-The above commands provide a human-friendly interface to the `AWS S3 sync`_ command and line utility.
+`push` sends files in the local `data/` directory to the S3 bucket and path in `config/datakit-data.json`, `pull` goes the other way from S3 to the local `data/` directory.
 
-The sync utility writes all files in a project's  local `data/` directory (and its subdirectories) to the
-S3 bucket and path specified in `config/datakit-data.json`, or vice versa.
-
-By default, this command does not delete previously written files in a target location
-if they have been removed in the source location.
-
-This functionality is available, however, via the `\-\-delete` flag of the underlying `AWS S3 sync`_ utility.
-`datakit-data` provides access to the `\-\-delete` flag and a limited set of other options provided by the `sync`
-command (see :ref:`usage-extraflags`).
+By default, neither command removes files in the destination that have been deleted from the source.
+To also prune those files, use the `delete` flag (see :ref:`usage-extraflags`).
 
 .. _usage-extraflags:
 
 Extra flags
 ~~~~~~~~~~~~
 
-While `datakit-data` is intended to simplify and standardize working with S3 as a data store, it
-also exposes a subset of more advanced options for the underlying `AWS S3 sync`_ utility.
+`push` and `pull` accept a small set of boolean flags, passed as additional parameters
+**without leading dashes** [2]_:
 
-Users can pass any **boolean** flag supported by *S3 sync* to the plugin's `push` or `pull` commands.
+**delete**
+  Remove files in the destination that are not present in the source. On `push` this deletes S3
+  objects under the project path with no local counterpart; on `pull` it deletes local files that
+  are no longer on S3.
 
-Boolean flags are those that do not accept values (i.e. simply calling them toggles a behavior on or off).
-
-The flags must be passed to `datakit` as additional paramaters **without leading dashes** [2]_ 
+**dryrun** (or **dry-run**)
+  Report what would be transferred or deleted, without making any changes.
 
 For example, to delete files on S3 that are *not* present locally::
 
   $ datakit data push delete
 
-To view which files will be affected before pushing data to S3::
+To view which files we be affected before pushing data to S3::
 
   $ datakit data push dryrun
 
@@ -202,9 +197,12 @@ To view which files will be affected before pushing data to S3::
 
   $ datakit data push delete dryrun
 
+`delete` and `dryrun` are the only supported flags; any other flag is ignored with a notice.
 
-Please refer to the `AWS S3 sync`_ documentation for details on other boolean flags.
+.. note::
 
+  For safety, `delete` is refused when `s3_path` is empty, as that would operate across the entire
+  bucket. Set a non-empty `s3_path` in `config/datakit-data.json` to use it.
 
 .. _usage-vcs--and-data:
 
@@ -227,7 +225,6 @@ the `data/` directory itself *should be excluded from version control.*
 
 
 .. _`AWS S3`: https://aws.amazon.com/s3/
-.. _`AWS S3 sync`: http://docs.aws.amazon.com/cli/latest/reference/s3/sync.html
 .. _`secret keys`: http://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys
 .. _`aws configure`: http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 .. _datakit: https://github.com/associatedpress/datakit-core
@@ -235,5 +232,4 @@ the `data/` directory itself *should be excluded from version control.*
 .. _`.gitignore`: https://git-scm.com/docs/gitignore
 
 .. [1] datakit-data does not currently guard against overwrites of pre-existing projects of the same name.
-.. [2] Leading dashes must be dropped to enable datakit to differentiate between its own flags and those intended for
-   pass-through to the underlying AWS S3 sync utility.
+.. [2] Leading dashes must be dropped so that datakit can distinguish these flags from its own command options.

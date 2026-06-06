@@ -17,7 +17,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,
-            help="One or more boolean S3 sync flags without leading dashes, e.g. delete or dryrun"
+            help="One or more boolean flags without leading dashes: delete, dryrun"
         )
         return parser
 
@@ -32,6 +32,9 @@ class Pull(ProjectMixin, CommandHelpers, Command):
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
+        unsupported = ExtraFlags.unsupported(parsed_args.args)
+        if unsupported:
+            self.log.info(f"Ignoring unsupported flag(s): {', '.join(unsupported)}")
         failures = s3.pull(
             'data/',
             self.project_configs['s3_path'],

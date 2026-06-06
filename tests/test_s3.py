@@ -144,9 +144,30 @@ def test_pull_delete(mocker):
     mock_remove = mocker.patch('datakit_data.s3.os.remove')
 
     s3 = S3('ap', 'foo.org')
-    s3.pull('data/', '2017/fake-project', extra_flags=['--delete'])
+    result = s3.pull('data/', '2017/fake-project', extra_flags=['--delete'])
 
+    assert result == 0
     mock_remove.assert_called_once_with('data/stale')
+
+
+def test_pull_delete_error(caplog, mocker):
+    """
+    S3.pull counts a failure when removing a local file raises OSError.
+    """
+    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_local_files', return_value={
+        'foo': 'data/foo',
+        'stale': 'data/stale',
+    })
+    mocker.patch('datakit_data.s3.boto3.Session')
+    mocker.patch('datakit_data.s3.os.makedirs')
+    mocker.patch('datakit_data.s3.os.remove', side_effect=OSError('locked'))
+
+    s3 = S3('ap', 'foo.org')
+    result = s3.pull('data/', '2017/fake-project', extra_flags=['--delete'])
+
+    assert result == 1
+    assert '*** Error ***' in caplog.text
 
 
 def test_push_client_error(caplog, mocker):

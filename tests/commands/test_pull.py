@@ -87,6 +87,20 @@ def test_boolean_cli_flags(mocker):
     )
 
 
+def test_unsupported_flag_warns(caplog, mocker):
+    """
+    An unsupported extra flag is reported and ignored; the pull still runs.
+    """
+    pull_mock = mocker.patch('datakit_data.commands.pull.S3.pull', autospec=True)
+    pull_mock.return_value = 0
+    cmd = Pull(mock.Mock(), None, 'data pull')
+    parsed_args = mock.Mock()
+    parsed_args.args = ['bogus']
+    cmd.run(parsed_args)
+    assert 'Ignoring unsupported flag(s): bogus' in caplog.text
+    pull_mock.assert_called_once()
+
+
 def test_pull_failures_exit_nonzero(caplog, mocker):
     """
     When S3.pull reports transfer failures, the command exits non-zero and logs a summary.
