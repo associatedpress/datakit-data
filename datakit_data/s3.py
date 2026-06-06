@@ -81,7 +81,7 @@ class S3:
                     failures += 1
                     logger.info(f"\n*** Error ***\n{e}\n")
         if delete:
-            local_files = self._list_local_files(data_dir)
+            local_files = {k: v for k, v in self._list_local_files(data_dir).items() if not k.endswith('.synced')}
             remote_rel = {k[len(prefix):] for k in remote_keys}
             for rel_path, local_path in sorted(local_files.items()):
                 if rel_path not in remote_rel:

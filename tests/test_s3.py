@@ -150,6 +150,28 @@ def test_pull_delete(mocker):
     mock_remove.assert_called_once_with('data/stale')
 
 
+def test_pull_delete_preserves_sync_markers(mocker):
+    """
+    S3.pull with --delete must not remove local .synced markers, which never exist as
+    remote keys. This matters when sync_status_location is data/ (push --sync-status-in-data),
+    where the markers live alongside the data files.
+    """
+    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_local_files', return_value={
+        'foo': 'data/foo',
+        'foo.synced': 'data/foo.synced',
+    })
+    mocker.patch('datakit_data.s3.boto3.Session')
+    mocker.patch('datakit_data.s3.os.makedirs')
+    mock_remove = mocker.patch('datakit_data.s3.os.remove')
+
+    s3 = S3('ap', 'foo.org')
+    result = s3.pull('data/', '2017/fake-project', extra_flags=['--delete'])
+
+    assert result == 0
+    mock_remove.assert_not_called()
+
+
 def test_pull_delete_error(caplog, mocker):
     """
     S3.pull counts a failure when removing a local file raises OSError.
