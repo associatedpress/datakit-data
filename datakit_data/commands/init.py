@@ -28,12 +28,14 @@ class Init(ProjectMixin, CommandHelpers, Command):
             mkdir_p(directory)
         open('data/.gitkeep', 'w').close()
         self.log.info("Created data/ directory")
-        self.create_project_config()
-        self.log.info("Created config/datakit-data.json")
+        if self.create_project_config():
+            self.log.info("Created config/datakit-data.json")
+        else:
+            self.log.info("config/datakit-data.json already exists - leaving it unchanged")
 
     def create_project_config(self):
         if os.path.exists(self.project_config_path):
-            return
+            return False
         if os.path.exists(self.plugin_config_path):
             plugin_configs = read_json(self.plugin_config_path)
             if not plugin_configs.get('s3_bucket'):
@@ -56,6 +58,7 @@ class Init(ProjectMixin, CommandHelpers, Command):
         self._expand_vars(to_write)
         self.finalize_configs(to_write)
         write_json(self.project_config_path, to_write)
+        return True
 
     def _prompt_for_plugin_configs(self):
         print("Please provide the following configuration values (press Enter to use the default):\n")

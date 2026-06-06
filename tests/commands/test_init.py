@@ -28,6 +28,7 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert 'config' in contents
     assert os.path.exists(os.path.join(fake_project, 'data/.gitkeep'))
     assert 'Initializing project' in caplog.text
+    assert 'Created config/datakit-data.json' in caplog.text
 
     # Test configs initialized from prompted values
     project_configs = read_json(cmd.project_config_path)
@@ -211,9 +212,10 @@ def test_dynamic_projectname_expansion(dkit_home, fake_project):
     assert cmd.project_configs['s3_path'] == 'fake-project/raw/fake-project'
 
 
-def test_preexisting_project_configs_honored(fake_project):
+def test_preexisting_project_configs_honored(caplog, fake_project):
     """
-    Subsequent initializations should not overwrite a pre-existing project config.
+    Subsequent initializations should not overwrite a pre-existing project config,
+    and should report that the config was left unchanged.
     """
     # Mimic a prior initialization by pre-creating the config file
     create_project_config(fake_project, {'aws_user_profile': 'user2'})
@@ -224,6 +226,7 @@ def test_preexisting_project_configs_honored(fake_project):
     assert proj_configs['aws_user_profile'] == 'user2'
     assert 's3_bucket' not in proj_configs
     assert 's3_path' not in proj_configs
+    assert 'already exists' in caplog.text
 
 
 def test_no_sync_status_location_in_system_config_warns(dkit_home, fake_project, capsys):
