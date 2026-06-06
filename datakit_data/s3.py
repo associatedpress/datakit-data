@@ -87,7 +87,11 @@ class S3:
                 if rel_path not in remote_rel:
                     logger.info(f"delete: {local_path}")
                     if not dryrun:
-                        os.remove(local_path)
+                        try:
+                            os.remove(local_path)
+                        except OSError as e:
+                            failures += 1
+                            logger.info(f"\n*** Error ***\n{e}\n")
         return failures
 
     def _client(self):
