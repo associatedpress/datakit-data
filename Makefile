@@ -53,7 +53,7 @@ lint: ## check style with ruff
 test: ## run tests quickly with the default Python
 	uv run pytest
 
-test-all: ## run tests on every Python version with tox
+test-all: ## run tests on the py310-py313 tox matrix
 	uv run tox
 
 coverage: ## check code coverage quickly with the default Python

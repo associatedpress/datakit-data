@@ -75,7 +75,7 @@ Ready to contribute? Here's how to set up `datakit-data` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass ruff and the tests, including testing other Python versions with tox::
+5. When you're done making changes, check that your changes pass ruff and the full py310-py313 tox matrix::
 
     $ make lint
     $ make test
