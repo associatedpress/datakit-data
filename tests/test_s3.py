@@ -1,4 +1,5 @@
 import os
+import time
 
 from botocore.exceptions import ClientError, EndpointConnectionError
 
@@ -29,9 +30,9 @@ def test_pull(mocker):
     """
     S3.pull downloads each S3 key to the correct local path.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=[
-        '2017/fake-project/foo', '2017/fake-project/bar'
-    ])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={
+        'foo': S3ObjectInfo(etag='e1'), 'bar': S3ObjectInfo(etag='e2'),
+    })
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mocker.patch('datakit_data.s3.os.makedirs')
@@ -47,15 +48,130 @@ def test_pull(mocker):
 
 
 def test_push_creates_sync_markers(mocker, tmpdir):
+    """S3.push records the uploaded object's ETag (quotes stripped) in the .synced marker."""
     data_dir = str(tmpdir.mkdir('data'))
     sync_dir = str(tmpdir.mkdir('sync'))
     open(os.path.join(data_dir, 'foo.csv'), 'w').close()
-    mocker.patch('datakit_data.s3.boto3.Session')
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+    mock_client.head_object.return_value = {'ETag': '"abc123"'}
 
     s3 = S3('ap', 'foo.org')
     s3.push(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
 
-    assert os.path.exists(os.path.join(sync_dir, 'foo.csv.synced'))
+    mock_client.head_object.assert_called_once_with(Bucket='foo.org', Key='2017/fake-project/foo.csv')
+    marker = os.path.join(sync_dir, 'foo.csv.synced')
+    assert os.path.exists(marker)
+    with open(marker) as f:
+        assert f.read() == 'abc123'
+
+
+def test_push_skips_unchanged(caplog, mocker, tmpdir):
+    """
+    S3.push skips a file whose .synced marker is at least as new as the data file (unchanged
+    on disk since the last push), without calling upload_file.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    data_file = os.path.join(data_dir, 'foo.csv')
+    open(data_file, 'w').close()
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'etag123')
+    now = time.time()
+    os.utime(data_file, (now - 100, now - 100))
+    os.utime(os.path.join(sync_dir, 'foo.csv.synced'), (now, now))
+
+    result = s3.push(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.upload_file.assert_not_called()
+    assert 'skipped: ' in caplog.text
+
+
+def test_push_uploads_when_data_newer(mocker, tmpdir):
+    """
+    S3.push uploads (and rewrites the marker) when the data file is newer than its .synced marker.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    data_file = os.path.join(data_dir, 'foo.csv')
+    open(data_file, 'w').close()
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+    mock_client.head_object.return_value = {'ETag': '"newetag"'}
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'oldetag')
+    marker_path = os.path.join(sync_dir, 'foo.csv.synced')
+    now = time.time()
+    os.utime(marker_path, (now - 100, now - 100))
+    os.utime(data_file, (now, now))
+
+    result = s3.push(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.upload_file.assert_called_once_with(data_file, 'foo.org', '2017/fake-project/foo.csv')
+    with open(marker_path) as f:
+        assert f.read() == 'newetag'
+
+
+def test_pull_creates_sync_markers(mocker, tmpdir):
+    """S3.pull records the downloaded object's ETag (from the listing) in the .synced marker."""
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='deadbeef')})
+    mocker.patch('datakit_data.s3.boto3.Session')
+
+    s3 = S3('ap', 'foo.org')
+    s3.pull(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    marker = os.path.join(sync_dir, 'foo.csv.synced')
+    assert os.path.exists(marker)
+    with open(marker) as f:
+        assert f.read() == 'deadbeef'
+
+
+def test_pull_skips_unchanged(caplog, mocker, tmpdir):
+    """
+    S3.pull skips a remote object whose ETag matches the ETag recorded in the .synced marker.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='same-etag')})
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'same-etag')
+    result = s3.pull(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.download_file.assert_not_called()
+    assert 'skipped: s3://foo.org/2017/fake-project/foo.csv' in caplog.text
+
+
+def test_pull_downloads_when_etag_differs(mocker, tmpdir):
+    """
+    S3.pull downloads (and rewrites the marker) when the remote ETag differs from the recorded one.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='new-etag')})
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'old-etag')
+    result = s3.pull(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.download_file.assert_called_once_with('foo.org', '2017/fake-project/foo.csv',
+                                                      os.path.join(data_dir, 'foo.csv'))
+    with open(os.path.join(sync_dir, 'foo.csv.synced')) as f:
+        assert f.read() == 'new-etag'
 
 
 def test_push_skips_synced_files(mocker):
@@ -96,7 +212,7 @@ def test_pull_dryrun(mocker):
     """
     S3.pull with --dryrun logs intended downloads without calling download_file.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo': S3ObjectInfo(etag='e1')})
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
 
@@ -134,7 +250,7 @@ def test_pull_delete(mocker):
     """
     S3.pull with --delete removes local files that are absent from S3.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo': S3ObjectInfo(etag='e1')})
     mocker.patch.object(S3, '_list_local_files', return_value={
         'foo': 'data/foo',
         'stale': 'data/stale',
@@ -156,7 +272,7 @@ def test_pull_delete_preserves_sync_markers(mocker):
     remote keys. This matters when sync_status_location is data/ (push --sync-status-in-data),
     where the markers live alongside the data files.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo': S3ObjectInfo(etag='e1')})
     mocker.patch.object(S3, '_list_local_files', return_value={
         'foo': 'data/foo',
         'foo.synced': 'data/foo.synced',
@@ -176,7 +292,7 @@ def test_pull_delete_error(caplog, mocker):
     """
     S3.pull counts a failure when removing a local file raises OSError.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo': S3ObjectInfo(etag='e1')})
     mocker.patch.object(S3, '_list_local_files', return_value={
         'foo': 'data/foo',
         'stale': 'data/stale',
@@ -311,7 +427,7 @@ def test_pull_delete_empty_path_refused(caplog, mocker):
     S3.pull refuses --delete when s3_path normalizes to an empty prefix (whole-bucket scope),
     aborting before any S3 client is created or keys are listed.
     """
-    list_keys = mocker.patch.object(S3, '_list_s3_keys')
+    list_objects = mocker.patch.object(S3, '_list_s3_objects')
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
 
     s3 = S3('ap', 'foo.org')
@@ -320,14 +436,14 @@ def test_pull_delete_empty_path_refused(caplog, mocker):
     assert result == 1
     assert 'Refusing --delete' in caplog.text
     mock_session.assert_not_called()
-    list_keys.assert_not_called()
+    list_objects.assert_not_called()
 
 
 def test_pull_client_error(caplog, mocker):
     """
     S3.pull logs an error message when boto3 raises a ClientError.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=['2017/fake-project/foo'])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo': S3ObjectInfo(etag='e1')})
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mock_client.download_file.side_effect = ClientError(
@@ -362,9 +478,9 @@ def test_pull_logging(caplog, mocker):
     """
     S3.pull logs a 'download:' line for each file transferred.
     """
-    mocker.patch.object(S3, '_list_s3_keys', return_value=[
-        '2017/fake-project/foo', '2017/fake-project/bar'
-    ])
+    mocker.patch.object(S3, '_list_s3_objects', return_value={
+        'foo': S3ObjectInfo(etag='e1'), 'bar': S3ObjectInfo(etag='e2'),
+    })
     mocker.patch('datakit_data.s3.boto3.Session')
     mocker.patch('datakit_data.s3.os.makedirs')
 
@@ -471,14 +587,12 @@ def test_list_s3_keys_empty_page(mocker):
 
 
 def test_list_s3_objects(mocker):
-    from datetime import datetime, timezone
-    last_modified = datetime(2024, 1, 15, 12, 0, 0, tzinfo=timezone.utc)
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mock_paginator = mock_client.get_paginator.return_value
     mock_paginator.paginate.return_value = [{'Contents': [
-        {'Key': '2017/foo', 'LastModified': last_modified, 'Size': 10},
-        {'Key': '2017/bar', 'LastModified': last_modified, 'Size': 20},
+        {'Key': '2017/foo', 'ETag': '"aaa"'},
+        {'Key': '2017/bar', 'ETag': '"bbb"'},
     ]}]
 
     s3 = S3('ap', 'foo.org')
@@ -487,8 +601,8 @@ def test_list_s3_objects(mocker):
 
     mock_paginator.paginate.assert_called_with(Bucket='foo.org', Prefix='2017/')
     assert result == {
-        'foo': S3ObjectInfo(size=10, last_modified=last_modified),
-        'bar': S3ObjectInfo(size=20, last_modified=last_modified),
+        'foo': S3ObjectInfo(etag='aaa'),
+        'bar': S3ObjectInfo(etag='bbb'),
     }
 
 
@@ -513,3 +627,11 @@ def test_normalize_prefix():
     assert s3._normalize_prefix('2017/fake-project') == '2017/fake-project/'
     assert s3._normalize_prefix('/2017/fake-project/') == '2017/fake-project/'
     assert s3._normalize_prefix('') == ''
+
+
+def test_normalize_etag():
+    """_normalize_etag strips the literal double quotes boto3 wraps around the ETag."""
+    s3 = S3('ap', 'foo.org')
+    assert s3._normalize_etag('"abc"') == 'abc'
+    assert s3._normalize_etag('') == ''
+    assert s3._normalize_etag(None) is None

@@ -52,7 +52,8 @@ def test_pull_invocation(mocker):
         mock.ANY,
         'data/',
         '2017/fake-project',
-        extra_flags=[]
+        extra_flags=[],
+        sync_status_dir=None
     )
 
 
@@ -83,7 +84,8 @@ def test_boolean_cli_flags(mocker):
         mock.ANY,
         'data/',
         '2017/fake-project',
-        extra_flags=['--dryrun']
+        extra_flags=['--dryrun'],
+        sync_status_dir=None
     )
 
 

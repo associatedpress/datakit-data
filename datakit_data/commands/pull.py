@@ -35,10 +35,12 @@ class Pull(ProjectMixin, CommandHelpers, Command):
         unsupported = ExtraFlags.unsupported(parsed_args.args)
         if unsupported:
             self.log.info(f"Ignoring unsupported flag(s): {', '.join(unsupported)}")
+        sync_status_dir = self.project_configs.get('sync_status_location')
         failures = s3.pull(
             'data/',
             self.project_configs['s3_path'],
-            extra_flags=clean_flags
+            extra_flags=clean_flags,
+            sync_status_dir=sync_status_dir
         )
         if failures:
             self.log.info(f"{failures} file(s) failed to transfer")
