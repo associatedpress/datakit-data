@@ -59,12 +59,13 @@ def test_pull_invocation(mocker):
 
 def test_get_parser():
     """
-    Pull parser exposes an 'args' attribute for remainder flags.
+    Pull parser exposes 'args' and 'force' attributes.
     """
     cmd = Pull(mock.Mock(), None, 'data pull')
     parser = cmd.get_parser('data pull')
     args = parser.parse_args([])
     assert hasattr(args, 'args')
+    assert hasattr(args, 'force')
 
 
 def test_boolean_cli_flags(mocker):
@@ -85,6 +86,27 @@ def test_boolean_cli_flags(mocker):
         'data/',
         '2017/fake-project',
         extra_flags=['--dryrun'],
+        sync_status_dir=None
+    )
+
+
+def test_force_option_forwarded(mocker):
+    """
+    --force is parsed as an option and forwarded to S3.pull.
+    """
+    pull_mock = mocker.patch(
+        'datakit_data.commands.pull.S3.pull',
+        autospec=True,
+    )
+    pull_mock.return_value = 0
+    cmd = Pull(mock.Mock(), None, 'data pull')
+    parsed_args = cmd.get_parser('data pull').parse_args(['--force'])
+    cmd.run(parsed_args)
+    pull_mock.assert_any_call(
+        mock.ANY,
+        'data/',
+        '2017/fake-project',
+        extra_flags=['--force'],
         sync_status_dir=None
     )
 

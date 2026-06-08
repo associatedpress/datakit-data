@@ -5,7 +5,8 @@ from datakit_data.extra_flags import ExtraFlags
 
 @pytest.mark.parametrize("flags", [
     [["dryrun"], ["--dryrun"]],
-    [["dryrun", "delete"], ["--dryrun", "--delete"]]
+    [["dryrun", "delete"], ["--dryrun", "--delete"]],
+    [["force", "--force"], ["--force", "--force"]],
 ])
 def test_boolean_conversion(flags):
     """
@@ -27,4 +28,4 @@ def test_unsupported_empty_when_all_known():
     """
     ExtraFlags.unsupported is empty when every flag is supported.
     """
-    assert ExtraFlags.unsupported(['dryrun', 'dry-run', 'delete']) == []
+    assert ExtraFlags.unsupported(['dryrun', 'dry-run', 'delete', 'force', '--force']) == []

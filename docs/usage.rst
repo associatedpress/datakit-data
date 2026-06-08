@@ -185,6 +185,11 @@ Extra flags
 **dryrun** (or **dry-run**)
   Report what would be transferred or deleted, without making any changes.
 
+**force** (or **--force**)
+  Ignore sync status checks. On `push`, upload every file in `data/` even when its `.synced`
+  marker is fresh; on `pull`, download every S3 object even when its ETag matches the recorded
+  marker. Transferred files still write their current S3 ETag to the corresponding marker.
+
 For example, to delete files on S3 that are *not* present locally::
 
   $ datakit data push delete
@@ -197,7 +202,11 @@ To view which files we be affected before pushing data to S3::
 
   $ datakit data push delete dryrun
 
-`delete` and `dryrun` are the only supported flags; any other flag is ignored with a notice.
+To push every local data file regardless of sync status::
+
+  $ datakit data push --force
+
+`delete`, `dryrun`, and `force` are the only supported flags; any other flag is ignored with a notice.
 
 .. note::
 

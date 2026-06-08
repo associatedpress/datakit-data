@@ -82,6 +82,27 @@ def test_boolean_cli_flags(mocker):
     )
 
 
+def test_force_option_forwarded(mocker):
+    """
+    --force is parsed as an option and forwarded to S3.push.
+    """
+    push_mock = mocker.patch(
+        'datakit_data.commands.push.S3.push',
+        autospec=True,
+    )
+    push_mock.return_value = 0
+    cmd = Push(mock.Mock(), None, 'data push')
+    parsed_args = cmd.get_parser('data push').parse_args(['--force'])
+    cmd.run(parsed_args)
+    push_mock.assert_any_call(
+        mock.ANY,
+        'data/',
+        '2017/fake-project',
+        extra_flags=['--force'],
+        sync_status_dir=None
+    )
+
+
 def test_get_parser():
     """
     Push parser exposes 'args' and 'sync_status_in_data' attributes.
@@ -90,6 +111,7 @@ def test_get_parser():
     parser = cmd.get_parser('data push')
     args = parser.parse_args([])
     assert hasattr(args, 'args')
+    assert hasattr(args, 'force')
     assert hasattr(args, 'sync_status_in_data')
 
 

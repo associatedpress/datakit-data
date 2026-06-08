@@ -17,7 +17,13 @@ class Pull(ProjectMixin, CommandHelpers, Command):
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,
-            help="One or more boolean flags without leading dashes: delete, dryrun"
+            help="One or more boolean flags without leading dashes: delete, dryrun, force"
+        )
+        parser.add_argument(
+            '--force',
+            action='store_true',
+            default=False,
+            help="Pull every S3 object, ignoring sync status checks"
         )
         return parser
 
@@ -32,6 +38,8 @@ class Pull(ProjectMixin, CommandHelpers, Command):
             return
         s3 = S3(user_profile, bucket)
         clean_flags = ExtraFlags.convert(parsed_args.args)
+        if getattr(parsed_args, 'force', False) is True and '--force' not in clean_flags:
+            clean_flags.append('--force')
         unsupported = ExtraFlags.unsupported(parsed_args.args)
         if unsupported:
             self.log.info(f"Ignoring unsupported flag(s): {', '.join(unsupported)}")

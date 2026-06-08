@@ -91,6 +91,34 @@ def test_push_skips_unchanged(caplog, mocker, tmpdir):
     assert 'skipped: ' in caplog.text
 
 
+def test_push_force_uploads_even_when_marker_fresh(mocker, tmpdir):
+    """
+    S3.push with --force uploads a file even when its .synced marker is fresh, then
+    records the uploaded object's ETag in the marker.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    data_file = os.path.join(data_dir, 'foo.csv')
+    open(data_file, 'w').close()
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+    mock_client.head_object.return_value = {'ETag': '"newetag"'}
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'oldetag')
+    marker_path = os.path.join(sync_dir, 'foo.csv.synced')
+    now = time.time()
+    os.utime(data_file, (now - 100, now - 100))
+    os.utime(marker_path, (now, now))
+
+    result = s3.push(data_dir, '2017/fake-project', extra_flags=['--force'], sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.upload_file.assert_called_once_with(data_file, 'foo.org', '2017/fake-project/foo.csv')
+    with open(marker_path) as f:
+        assert f.read() == 'newetag'
+
+
 def test_push_uploads_when_data_newer(mocker, tmpdir):
     """
     S3.push uploads (and rewrites the marker) when the data file is newer than its .synced marker.
@@ -140,6 +168,7 @@ def test_pull_skips_unchanged(caplog, mocker, tmpdir):
     """
     data_dir = str(tmpdir.mkdir('data'))
     sync_dir = str(tmpdir.mkdir('sync'))
+    open(os.path.join(data_dir, 'foo.csv'), 'w').close()
     mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='same-etag')})
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
@@ -151,6 +180,59 @@ def test_pull_skips_unchanged(caplog, mocker, tmpdir):
     assert result == 0
     mock_client.download_file.assert_not_called()
     assert 'skipped: s3://foo.org/2017/fake-project/foo.csv' in caplog.text
+
+
+def test_pull_downloads_when_local_file_missing_even_if_etag_matches(mocker, tmpdir):
+    """
+    S3.pull restores a missing local file even when the recorded marker ETag matches S3.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='same-etag')})
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'same-etag')
+    marker_path = os.path.join(sync_dir, 'foo.csv.synced')
+    old_mtime = time.time() - 100
+    os.utime(marker_path, (old_mtime, old_mtime))
+
+    result = s3.pull(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.download_file.assert_called_once_with('foo.org', '2017/fake-project/foo.csv',
+                                                      os.path.join(data_dir, 'foo.csv'))
+    with open(marker_path) as f:
+        assert f.read() == 'same-etag'
+    assert os.path.getmtime(marker_path) > old_mtime
+
+
+def test_pull_force_downloads_even_when_etag_matches(mocker, tmpdir):
+    """
+    S3.pull with --force downloads a remote object even when its ETag matches the recorded
+    marker, then refreshes the marker with the pulled object's ETag.
+    """
+    data_dir = str(tmpdir.mkdir('data'))
+    sync_dir = str(tmpdir.mkdir('sync'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value={'foo.csv': S3ObjectInfo(etag='same-etag')})
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    s3._create_sync_marker('foo.csv', sync_dir, 'same-etag')
+    marker_path = os.path.join(sync_dir, 'foo.csv.synced')
+    old_mtime = time.time() - 100
+    os.utime(marker_path, (old_mtime, old_mtime))
+
+    result = s3.pull(data_dir, '2017/fake-project', extra_flags=['--force'], sync_status_dir=sync_dir)
+
+    assert result == 0
+    mock_client.download_file.assert_called_once_with('foo.org', '2017/fake-project/foo.csv',
+                                                      os.path.join(data_dir, 'foo.csv'))
+    with open(marker_path) as f:
+        assert f.read() == 'same-etag'
+    assert os.path.getmtime(marker_path) > old_mtime
 
 
 def test_pull_downloads_when_etag_differs(mocker, tmpdir):

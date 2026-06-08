@@ -32,6 +32,7 @@ class S3:
         extra_flags = extra_flags or []
         dryrun = '--dryrun' in extra_flags or '--dry-run' in extra_flags
         delete = '--delete' in extra_flags
+        force = '--force' in extra_flags
         prefix = self._normalize_prefix(s3_path)
         if delete and not prefix:
             logger.info(EMPTY_PATH_DELETE_MSG)
@@ -41,7 +42,7 @@ class S3:
         local_files = {k: v for k, v in self._list_local_files(data_dir).items() if not k.endswith('.synced')}
         for rel_path, local_path in sorted(local_files.items()):
             key = prefix + rel_path
-            if self._marker_is_fresh(local_path, rel_path, sync_status_dir):
+            if not force and self._marker_is_fresh(local_path, rel_path, sync_status_dir):
                 logger.info(f"skipped: {local_path}")
                 continue
             logger.info(f"upload: {local_path} to s3://{self.bucket}/{key}")
@@ -68,6 +69,7 @@ class S3:
         extra_flags = extra_flags or []
         dryrun = '--dryrun' in extra_flags or '--dry-run' in extra_flags
         delete = '--delete' in extra_flags
+        force = '--force' in extra_flags
         prefix = self._normalize_prefix(s3_path)
         if delete and not prefix:
             logger.info(EMPTY_PATH_DELETE_MSG)
@@ -79,10 +81,11 @@ class S3:
             key = prefix + rel_path
             remote_etag = remote_objects[rel_path].etag
             local_path = os.path.join(data_dir, rel_path)
-            marker_etag = self._marker_etag(rel_path, sync_status_dir)
-            if marker_etag is not None and marker_etag == remote_etag:
-                logger.info(f"skipped: s3://{self.bucket}/{key}")
-                continue
+            if not force:
+                marker_etag = self._marker_etag(rel_path, sync_status_dir)
+                if marker_etag is not None and marker_etag == remote_etag and os.path.exists(local_path):
+                    logger.info(f"skipped: s3://{self.bucket}/{key}")
+                    continue
             logger.info(f"download: s3://{self.bucket}/{key} to {local_path}")
             if not dryrun:
                 os.makedirs(os.path.dirname(os.path.abspath(local_path)), exist_ok=True)
