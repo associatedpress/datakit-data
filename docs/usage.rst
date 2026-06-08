@@ -169,6 +169,7 @@ Pushing and pulling data between your local machine and the S3 data store requir
 By default, neither command removes files in the destination that have been deleted from the source.
 To also prune those files, use the `delete` flag (see :ref:`usage-extraflags`).
 
+
 .. _usage-extraflags:
 
 Extra flags
@@ -212,6 +213,11 @@ To push every local data file regardless of sync status::
 
   For safety, `delete` is refused when `s3_path` is empty, as that would operate across the entire
   bucket. Set a non-empty `s3_path` in `config/datakit-data.json` to use it.
+
+Concurrency
+~~~~~~~~~~~~
+
+The `push` and `pull` commands offer no guarantees for isolation or similar issues when multiple people are trying to edit the same S3 keys. If you are working in a project with many collaborators, you will have to coordinate data pushes to S3 to avoid potential issues with concurrency.
 
 .. _usage-vcs--and-data:
 
