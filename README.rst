@@ -12,5 +12,14 @@ easily archive and share data assets on S3.
 
 Please see the `official docs`_ for details on installation and usage.
 
+Installation
+============
+
+`uv tool install datakit-core --with datakit-data`
+
+Other datakit plugins can be installed alongside by appending additional `--with` statements:
+
+`uv tool install datakit-core --with datakit-project --with datakit-data --with datakit-gitlab`
+
 .. _datakit: https://github.com/associatedpress/datakit-core
 .. _`official docs`: https://datakit-data.readthedocs.io/en/latest/
