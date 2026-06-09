@@ -6,24 +6,25 @@ from botocore.exceptions import ClientError, EndpointConnectionError
 from datakit_data.s3 import S3, S3ObjectInfo
 
 
-def test_push(mocker):
+def test_push(mocker, tmpdir):
     """
-    S3.push uploads each local file to the correct S3 key.
+    S3.push uploads each small local file to the correct S3 key via put_object.
     """
-    mocker.patch.object(S3, '_list_local_files', return_value={
-        'foo': 'data/foo', 'bar': 'data/bar'
-    })
+    data_dir = str(tmpdir.mkdir('data'))
+    open(os.path.join(data_dir, 'foo'), 'w').close()
+    open(os.path.join(data_dir, 'bar'), 'w').close()
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
 
     s3 = S3('ap', 'foo.org')
-    result = s3.push('data/', '2017/fake-project')
+    result = s3.push(data_dir, '2017/fake-project')
 
     assert result == 0
     mock_session.assert_called_once_with(profile_name='ap')
-    upload_calls = {call[0] for call in mock_client.upload_file.call_args_list}
-    assert ('data/foo', 'foo.org', '2017/fake-project/foo') in upload_calls
-    assert ('data/bar', 'foo.org', '2017/fake-project/bar') in upload_calls
+    mock_client.upload_file.assert_not_called()
+    put_calls = {(c.kwargs['Bucket'], c.kwargs['Key']) for c in mock_client.put_object.call_args_list}
+    assert ('foo.org', '2017/fake-project/foo') in put_calls
+    assert ('foo.org', '2017/fake-project/bar') in put_calls
 
 
 def test_pull(mocker):
@@ -48,18 +49,22 @@ def test_pull(mocker):
 
 
 def test_push_creates_sync_markers(mocker, tmpdir):
-    """S3.push records the uploaded object's ETag (quotes stripped) in the .synced marker."""
+    """S3.push records the uploaded object's ETag (quotes stripped) in the .synced marker.
+
+    A small file is uploaded with put_object, so the ETag comes from its response and no
+    head_object round-trip is made.
+    """
     data_dir = str(tmpdir.mkdir('data'))
     sync_dir = str(tmpdir.mkdir('sync'))
     open(os.path.join(data_dir, 'foo.csv'), 'w').close()
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
-    mock_client.head_object.return_value = {'ETag': '"abc123"'}
+    mock_client.put_object.return_value = {'ETag': '"abc123"'}
 
     s3 = S3('ap', 'foo.org')
     s3.push(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
 
-    mock_client.head_object.assert_called_once_with(Bucket='foo.org', Key='2017/fake-project/foo.csv')
+    mock_client.head_object.assert_not_called()
     marker = os.path.join(sync_dir, 'foo.csv.synced')
     assert os.path.exists(marker)
     with open(marker) as f:
@@ -102,7 +107,7 @@ def test_push_force_uploads_even_when_marker_fresh(mocker, tmpdir):
     open(data_file, 'w').close()
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
-    mock_client.head_object.return_value = {'ETag': '"newetag"'}
+    mock_client.put_object.return_value = {'ETag': '"newetag"'}
 
     s3 = S3('ap', 'foo.org')
     s3._create_sync_marker('foo.csv', sync_dir, 'oldetag')
@@ -114,7 +119,7 @@ def test_push_force_uploads_even_when_marker_fresh(mocker, tmpdir):
     result = s3.push(data_dir, '2017/fake-project', extra_flags=['--force'], sync_status_dir=sync_dir)
 
     assert result == 0
-    mock_client.upload_file.assert_called_once_with(data_file, 'foo.org', '2017/fake-project/foo.csv')
+    assert mock_client.put_object.call_args.kwargs['Key'] == '2017/fake-project/foo.csv'
     with open(marker_path) as f:
         assert f.read() == 'newetag'
 
@@ -129,7 +134,7 @@ def test_push_uploads_when_data_newer(mocker, tmpdir):
     open(data_file, 'w').close()
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
-    mock_client.head_object.return_value = {'ETag': '"newetag"'}
+    mock_client.put_object.return_value = {'ETag': '"newetag"'}
 
     s3 = S3('ap', 'foo.org')
     s3._create_sync_marker('foo.csv', sync_dir, 'oldetag')
@@ -141,9 +146,66 @@ def test_push_uploads_when_data_newer(mocker, tmpdir):
     result = s3.push(data_dir, '2017/fake-project', sync_status_dir=sync_dir)
 
     assert result == 0
-    mock_client.upload_file.assert_called_once_with(data_file, 'foo.org', '2017/fake-project/foo.csv')
+    assert mock_client.put_object.call_args.kwargs['Key'] == '2017/fake-project/foo.csv'
     with open(marker_path) as f:
         assert f.read() == 'newetag'
+
+
+def test_upload_small_file_uses_put_object(mocker, tmpdir):
+    """
+    _upload sends a sub-threshold file with put_object and returns the ETag from its response,
+    without a head_object round-trip.
+    """
+    data_file = os.path.join(str(tmpdir), 'foo.csv')
+    open(data_file, 'w').close()
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+    mock_client.put_object.return_value = {'ETag': '"abc123"'}
+
+    s3 = S3('ap', 'foo.org')
+    etag = s3._upload(mock_client, data_file, '2017/fake-project/foo.csv', need_etag=True)
+
+    assert etag == 'abc123'
+    assert mock_client.put_object.call_args.kwargs['Bucket'] == 'foo.org'
+    assert mock_client.put_object.call_args.kwargs['Key'] == '2017/fake-project/foo.csv'
+    mock_client.upload_file.assert_not_called()
+    mock_client.head_object.assert_not_called()
+
+
+def test_upload_large_file_uses_multipart_with_head(mocker):
+    """
+    _upload sends an at/above-threshold file with the managed upload_file (multipart) and, when
+    the ETag is needed, reads it back with head_object.
+    """
+    mocker.patch('datakit_data.s3.os.path.getsize', return_value=S3.MULTIPART_THRESHOLD)
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+    mock_client.head_object.return_value = {'ETag': '"multi-2"'}
+
+    s3 = S3('ap', 'foo.org')
+    etag = s3._upload(mock_client, 'data/big.bin', '2017/fake-project/big.bin', need_etag=True)
+
+    assert etag == 'multi-2'
+    mock_client.upload_file.assert_called_once_with('data/big.bin', 'foo.org', '2017/fake-project/big.bin')
+    mock_client.head_object.assert_called_once_with(Bucket='foo.org', Key='2017/fake-project/big.bin')
+    mock_client.put_object.assert_not_called()
+
+
+def test_upload_large_file_skips_head_when_etag_not_needed(mocker):
+    """
+    _upload skips the head_object round-trip for a large file when no ETag is needed (no sync
+    marker to write).
+    """
+    mocker.patch('datakit_data.s3.os.path.getsize', return_value=S3.MULTIPART_THRESHOLD + 1)
+    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
+    mock_client = mock_session.return_value.client.return_value
+
+    s3 = S3('ap', 'foo.org')
+    etag = s3._upload(mock_client, 'data/big.bin', '2017/fake-project/big.bin', need_etag=False)
+
+    assert etag is None
+    mock_client.upload_file.assert_called_once_with('data/big.bin', 'foo.org', '2017/fake-project/big.bin')
+    mock_client.head_object.assert_not_called()
 
 
 def test_pull_creates_sync_markers(mocker, tmpdir):
@@ -265,20 +327,20 @@ def test_push_skips_synced_files(mocker):
         'foo.synced': 'data/foo.synced',
         'subdir/bar.synced': 'data/subdir/bar.synced',
     })
-    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
-    mock_client = mock_session.return_value.client.return_value
+    mocker.patch('datakit_data.s3.boto3.Session')
+    upload = mocker.patch.object(S3, '_upload', return_value='etag')
 
     s3 = S3('ap', 'foo.org')
     s3.push('data/', '2017/fake-project')
 
-    upload_calls = {call[0] for call in mock_client.upload_file.call_args_list}
-    assert ('data/foo', 'foo.org', '2017/fake-project/foo') in upload_calls
-    assert not any('.synced' in call[2] for call in upload_calls)
+    upload_keys = {call.args[2] for call in upload.call_args_list}
+    assert '2017/fake-project/foo' in upload_keys
+    assert not any('.synced' in key for key in upload_keys)
 
 
 def test_push_dryrun(mocker):
     """
-    S3.push with --dryrun logs intended uploads without calling upload_file.
+    S3.push with --dryrun logs intended uploads without transferring anything.
     """
     mocker.patch.object(S3, '_list_local_files', return_value={'foo': 'data/foo'})
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
@@ -287,6 +349,7 @@ def test_push_dryrun(mocker):
     s3 = S3('ap', 'foo.org')
     s3.push('data/', '2017/fake-project', extra_flags=['--dryrun'])
 
+    mock_client.put_object.assert_not_called()
     mock_client.upload_file.assert_not_called()
 
 
@@ -313,6 +376,7 @@ def test_push_delete(mocker):
         '2017/fake-project/foo',
         '2017/fake-project/stale',
     ])
+    mocker.patch.object(S3, '_upload', return_value='etag')
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mock_client.delete_objects.return_value = {'Deleted': [{'Key': '2017/fake-project/stale'}]}
@@ -395,11 +459,10 @@ def test_push_client_error(caplog, mocker):
     S3.push logs an error message and counts the failure when boto3 raises a ClientError.
     """
     mocker.patch.object(S3, '_list_local_files', return_value={'foo': 'data/foo'})
-    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
-    mock_client = mock_session.return_value.client.return_value
-    mock_client.upload_file.side_effect = ClientError(
+    mocker.patch('datakit_data.s3.boto3.Session')
+    mocker.patch.object(S3, '_upload', side_effect=ClientError(
         {'Error': {'Code': 'AccessDenied', 'Message': 'Access Denied'}}, 'PutObject'
-    )
+    ))
 
     s3 = S3('ap', 'foo.org')
     result = s3.push('data/', '2017/fake-project')
@@ -413,9 +476,8 @@ def test_push_connection_error(caplog, mocker):
     S3.push also catches non-ClientError botocore errors (e.g. connection failures).
     """
     mocker.patch.object(S3, '_list_local_files', return_value={'foo': 'data/foo'})
-    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
-    mock_client = mock_session.return_value.client.return_value
-    mock_client.upload_file.side_effect = EndpointConnectionError(endpoint_url='https://s3')
+    mocker.patch('datakit_data.s3.boto3.Session')
+    mocker.patch.object(S3, '_upload', side_effect=EndpointConnectionError(endpoint_url='https://s3'))
 
     s3 = S3('ap', 'foo.org')
     result = s3.push('data/', '2017/fake-project')
@@ -434,6 +496,7 @@ def test_push_delete_batch_error(caplog, mocker):
         '2017/fake-project/stale1',
         '2017/fake-project/stale2',
     ])
+    mocker.patch.object(S3, '_upload', return_value='etag')
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mock_client.delete_objects.side_effect = ClientError(
@@ -457,6 +520,7 @@ def test_push_delete_partial_error(caplog, mocker):
         '2017/fake-project/stale1',
         '2017/fake-project/stale2',
     ])
+    mocker.patch.object(S3, '_upload', return_value='etag')
     mock_session = mocker.patch('datakit_data.s3.boto3.Session')
     mock_client = mock_session.return_value.client.return_value
     mock_client.delete_objects.return_value = {
@@ -494,14 +558,14 @@ def test_push_empty_path_without_delete_allowed(mocker):
     without a leading slash.
     """
     mocker.patch.object(S3, '_list_local_files', return_value={'foo': 'data/foo'})
-    mock_session = mocker.patch('datakit_data.s3.boto3.Session')
-    mock_client = mock_session.return_value.client.return_value
+    mocker.patch('datakit_data.s3.boto3.Session')
+    upload = mocker.patch.object(S3, '_upload', return_value='etag')
 
     s3 = S3('ap', 'foo.org')
     result = s3.push('data/', '', extra_flags=[])
 
     assert result == 0
-    mock_client.upload_file.assert_called_once_with('data/foo', 'foo.org', 'foo')
+    assert upload.call_args.args[1:3] == ('data/foo', 'foo')
 
 
 def test_pull_delete_empty_path_refused(caplog, mocker):
@@ -548,6 +612,7 @@ def test_push_logging(caplog, mocker):
         'foo': 'data/foo', 'bar': 'data/bar'
     })
     mocker.patch('datakit_data.s3.boto3.Session')
+    mocker.patch.object(S3, '_upload', return_value='etag')
 
     s3 = S3('ap', 'foo.org')
     s3.push('data/', '2017/fake-project')

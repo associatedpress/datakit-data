@@ -24,6 +24,14 @@ EMPTY_PATH_DELETE_MSG = (
 class S3:
     """A limited, human-friendly interface to S3."""
 
+    # boto3's managed upload_file transparently switches from a single PutObject to a multipart
+    # upload above this many bytes (its TransferConfig.multipart_threshold default). We mirror it:
+    # files below the threshold take the put_object fast path, whose response carries the ETag, so
+    # we avoid a follow-up head_object; larger files keep upload_file's multipart transfer (and its
+    # part-level resilience) and we read the ETag back with head_object. Either way the ETag we
+    # record is the one S3 itself reports, so it stays comparable to a later head/list probe.
+    MULTIPART_THRESHOLD = 8 * 1024 * 1024
+
     def __init__(self, aws_user_profile, s3_bucket):
         self.user_profile = aws_user_profile
         self.bucket = s3_bucket
@@ -48,9 +56,8 @@ class S3:
             logger.info(f"upload: {local_path} to s3://{self.bucket}/{key}")
             if not dryrun:
                 try:
-                    client.upload_file(local_path, self.bucket, key)
+                    etag = self._upload(client, local_path, key, sync_status_dir is not None)
                     if sync_status_dir is not None:
-                        etag = self._object_etag(client, key)
                         self._create_sync_marker(rel_path, sync_status_dir, etag)
                 except (ClientError, BotoCoreError) as e:
                     failures += 1
@@ -123,6 +130,18 @@ class S3:
     def _object_etag(self, client, key):
         response = client.head_object(Bucket=self.bucket, Key=key)
         return self._normalize_etag(response.get('ETag'))
+
+    def _upload(self, client, local_path, key, need_etag):
+        # Upload a local file to `key` and return the object's S3 ETag (quotes stripped). Small
+        # files go via put_object, whose response carries the ETag, so no extra head_object is
+        # needed; larger files keep upload_file's managed multipart transfer and we read the ETag
+        # back with head_object only when a sync marker needs it (need_etag), else return None.
+        if os.path.getsize(local_path) < self.MULTIPART_THRESHOLD:
+            with open(local_path, 'rb') as body:
+                response = client.put_object(Bucket=self.bucket, Key=key, Body=body)
+            return self._normalize_etag(response.get('ETag'))
+        client.upload_file(local_path, self.bucket, key)
+        return self._object_etag(client, key) if need_etag else None
 
     def _normalize_prefix(self, s3_path):
         # Returns '' for falsy input so callers can concatenate key segments without a leading slash.
