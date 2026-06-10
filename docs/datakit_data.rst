@@ -36,6 +36,14 @@ datakit\_data.s3 module
    :undoc-members:
    :show-inheritance:
 
+datakit\_data.sync\_markers module
+----------------------------------
+
+.. automodule:: datakit_data.sync_markers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

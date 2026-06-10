@@ -6,6 +6,8 @@ from logging import NullHandler
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+from .sync_markers import SyncMarkers
+
 
 logger = logging.getLogger(__name__)
 logger.addHandler(NullHandler())
@@ -15,10 +17,36 @@ logger.addHandler(NullHandler())
 # the object changed on S3 since our last sync.
 S3ObjectInfo = namedtuple('S3ObjectInfo', ['etag'])
 
+# The result of S3.compare: sorted lists of rel_paths bucketed by how the local copy, the live
+# remote object, and the recorded .synced marker disagree. 'differ' holds files present on both
+# sides whose difference cannot be attributed for lack of a usable sync record.
+SyncComparison = namedtuple(
+    'SyncComparison', ['only_local', 'only_s3', 'changed_local', 'changed_s3', 'conflict', 'differ']
+)
+
 EMPTY_PATH_DELETE_MSG = (
     "\n*** Refusing --delete with an empty s3_path: this would scan and delete "
     "across the entire bucket. Set s3_path in the project config. ***\n"
 )
+
+
+def list_local_files(data_dir):
+    # Map of rel_path -> full path for every data file under data_dir, excluding .synced
+    # markers (which live alongside the data when sync_status_location is data/). The key is
+    # used to build/compare S3 keys, which always use '/'; normalize the OS separator so keys
+    # generated on Windows match remote keys, while the value stays OS-native for filesystem
+    # operations.
+    files = {}
+    if not os.path.isdir(data_dir):
+        return files
+    for root, _, filenames in os.walk(data_dir):
+        for filename in filenames:
+            if filename.endswith(SyncMarkers.SUFFIX):
+                continue
+            full_path = os.path.join(root, filename)
+            rel_path = os.path.relpath(full_path, data_dir).replace(os.sep, '/')
+            files[rel_path] = full_path
+    return files
 
 
 class S3:
@@ -45,20 +73,21 @@ class S3:
         if delete and not prefix:
             logger.info(EMPTY_PATH_DELETE_MSG)
             return 1
+        markers = SyncMarkers(sync_status_dir)
         client = self._client()
         failures = 0
-        local_files = {k: v for k, v in self._list_local_files(data_dir).items() if not k.endswith('.synced')}
+        local_files = list_local_files(data_dir)
         for rel_path, local_path in sorted(local_files.items()):
             key = prefix + rel_path
-            if not force and self._marker_is_fresh(local_path, rel_path, sync_status_dir):
+            if not force and markers.is_fresh(rel_path, local_path):
                 logger.info(f"skipped: {local_path}")
                 continue
             logger.info(f"upload: {local_path} to s3://{self.bucket}/{key}")
             if not dryrun:
                 try:
-                    etag = self._upload(client, local_path, key, sync_status_dir is not None)
-                    if sync_status_dir is not None:
-                        self._create_sync_marker(rel_path, sync_status_dir, etag)
+                    etag = self._upload(client, local_path, key, markers.enabled)
+                    if markers.enabled:
+                        markers.write(rel_path, etag)
                 except (ClientError, BotoCoreError) as e:
                     failures += 1
                     logger.info(f"\n*** Error ***\n{e}\n")
@@ -81,6 +110,7 @@ class S3:
         if delete and not prefix:
             logger.info(EMPTY_PATH_DELETE_MSG)
             return 1
+        markers = SyncMarkers(sync_status_dir)
         client = self._client()
         failures = 0
         remote_objects = self._list_s3_objects(client, prefix)
@@ -89,7 +119,7 @@ class S3:
             remote_etag = remote_objects[rel_path].etag
             local_path = os.path.join(data_dir, rel_path)
             if not force:
-                marker_etag = self._marker_etag(rel_path, sync_status_dir)
+                marker_etag = markers.etag(rel_path)
                 if marker_etag is not None and marker_etag == remote_etag and os.path.exists(local_path):
                     logger.info(f"skipped: s3://{self.bucket}/{key}")
                     continue
@@ -98,13 +128,13 @@ class S3:
                 os.makedirs(os.path.dirname(os.path.abspath(local_path)), exist_ok=True)
                 try:
                     client.download_file(self.bucket, key, local_path)
-                    if sync_status_dir is not None:
-                        self._create_sync_marker(rel_path, sync_status_dir, remote_etag)
+                    if markers.enabled:
+                        markers.write(rel_path, remote_etag)
                 except (ClientError, BotoCoreError) as e:
                     failures += 1
                     logger.info(f"\n*** Error ***\n{e}\n")
         if delete:
-            local_files = {k: v for k, v in self._list_local_files(data_dir).items() if not k.endswith('.synced')}
+            local_files = list_local_files(data_dir)
             remote_rel = set(remote_objects)
             for rel_path, local_path in sorted(local_files.items()):
                 if rel_path not in remote_rel:
@@ -116,6 +146,43 @@ class S3:
                             failures += 1
                             logger.info(f"\n*** Error ***\n{e}\n")
         return failures
+
+    def compare(self, data_dir, s3_path='', sync_status_dir=None):
+        """Compare local data files against the bucket's live listing.
+
+        Returns a SyncComparison bucketing each rel_path by what changed since the sync
+        recorded in its .synced marker: present on only one side, changed locally, changed
+        on S3, changed on both (conflict), or present on both sides with no usable sync
+        record to attribute the difference (differ). In-sync files are not reported.
+        """
+        markers = SyncMarkers(sync_status_dir)
+        client = self._client()
+        prefix = self._normalize_prefix(s3_path)
+        local_files = list_local_files(data_dir)
+        remote_objects = self._list_s3_objects(client, prefix)
+        changed_local, changed_s3, conflict, differ = [], [], [], []
+        for rel_path in sorted(set(local_files) & set(remote_objects)):
+            marker_etag, marker_mtime = markers.read(rel_path)
+            if marker_etag is None:
+                differ.append(rel_path)
+                continue
+            s3_changed = remote_objects[rel_path].etag != marker_etag
+            local_changed = os.path.getmtime(local_files[rel_path]) > marker_mtime
+            if local_changed and s3_changed:
+                conflict.append(rel_path)
+            elif local_changed:
+                changed_local.append(rel_path)
+            elif s3_changed:
+                changed_s3.append(rel_path)
+            # else: neither side changed since the last sync -> in sync, nothing to report
+        return SyncComparison(
+            only_local=sorted(set(local_files) - set(remote_objects)),
+            only_s3=sorted(set(remote_objects) - set(local_files)),
+            changed_local=changed_local,
+            changed_s3=changed_s3,
+            conflict=conflict,
+            differ=differ,
+        )
 
     def _client(self):
         session = boto3.Session(profile_name=self.user_profile)
@@ -148,51 +215,6 @@ class S3:
         if not s3_path:
             return ''
         return s3_path.strip('/') + '/'
-
-    def _marker_is_fresh(self, local_path, rel_path, sync_status_dir):
-        # True when a .synced marker exists and is at least as new as the data file, i.e. the
-        # file has not been modified on disk since our last push. Mirrors the staleness test in
-        # `data status` (a file is stale when its mtime is strictly newer than its marker's).
-        if not sync_status_dir:
-            return False
-        marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
-        if not os.path.exists(marker_path):
-            return False
-        return os.path.getmtime(marker_path) >= os.path.getmtime(local_path)
-
-    def _marker_etag(self, rel_path, sync_status_dir):
-        # Return the ETag recorded in the file's .synced marker, or None when there is no
-        # usable record (no location configured, no marker, or a legacy/empty marker).
-        if not sync_status_dir:
-            return None
-        marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
-        if not os.path.exists(marker_path):
-            return None
-        with open(marker_path) as f:
-            etag = f.read().strip()
-        return etag or None
-
-    def _create_sync_marker(self, rel_path, sync_status_dir, etag):
-        # The marker's content is the object's S3 ETag at sync time (the basis for detecting
-        # remote changes); its mtime is the sync time (the basis for detecting local changes).
-        marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
-        os.makedirs(os.path.dirname(os.path.abspath(marker_path)), exist_ok=True)
-        with open(marker_path, 'w') as f:
-            f.write(etag or '')
-
-    def _list_local_files(self, data_dir):
-        files = {}
-        if not os.path.isdir(data_dir):
-            return files
-        for root, _, filenames in os.walk(data_dir):
-            for filename in filenames:
-                full_path = os.path.join(root, filename)
-                # The key is used to build/compare S3 keys, which always use '/'. Normalize
-                # the OS separator so keys generated on Windows match remote keys; the value
-                # stays OS-native for filesystem operations.
-                rel_path = os.path.relpath(full_path, data_dir).replace(os.sep, '/')
-                files[rel_path] = full_path
-        return files
 
     def _delete_keys(self, client, keys):
         # delete_objects removes up to 1000 keys per request; batch accordingly.

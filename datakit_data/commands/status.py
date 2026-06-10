@@ -1,11 +1,12 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime
 from cliff.command import Command
 from datakit import CommandHelpers
 from datakit.utils import read_json, write_json
 
 from ..project_mixin import ProjectMixin
-from ..s3 import S3
+from ..s3 import S3, list_local_files
+from ..sync_markers import SyncMarkers
 
 class Status(ProjectMixin, CommandHelpers, Command):
 
@@ -32,25 +33,17 @@ class Status(ProjectMixin, CommandHelpers, Command):
             self.log.info("No config file found - have you run `datakit data init`?")
             return
         sync_status_dir = self.project_configs.get('sync_status_location')
-        last_push = self._last_push_time(sync_status_dir) if sync_status_dir else None
+        markers = SyncMarkers(sync_status_dir)
+        last_push = markers.latest_mtime()
         if last_push:
-            self.log.info(f"Last pushed: {last_push.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+            stamp = datetime.fromtimestamp(last_push).astimezone()
+            self.log.info(f"Last pushed: {stamp.strftime('%Y-%m-%d %H:%M:%S %Z')}")
         else:
             self.log.info("Last pushed: never")
         if getattr(parsed_args, 'all', False):
-            bucket = self.project_configs['s3_bucket']
-            if bucket == "":
-                self.log.info("No bucket specified in config")
-                return
-            self._report_s3_comparison(
-                self.project_configs['aws_user_profile'],
-                bucket,
-                self.project_configs['s3_path'],
-                sync_status_dir,
-                filepaths=parsed_args.filepaths,
-            )
+            self._report_s3_comparison(sync_status_dir, parsed_args.filepaths)
             return
-        if not sync_status_dir:
+        if not markers.enabled:
             self.log.info("No sync_status_location configured")
             answer = input("\nAdd sync_status_location = '.sync_status/' to project config? [Y/n]: ").strip().lower()
             if answer in ('', 'y', 'yes'):
@@ -59,96 +52,39 @@ class Status(ProjectMixin, CommandHelpers, Command):
                 write_json(self.project_config_path, configs)
                 self.log.info("Added sync_status_location to config/datakit-data.json")
             return
-        missing, stale = self._find_unsynced('data/', sync_status_dir)
+        missing, stale = self._find_unsynced('data/', markers)
 
         self._log_group("file(s) missing a .synced file", missing, parsed_args.filepaths)
         self._log_group("file(s) modified since last sync", stale, parsed_args.filepaths)
 
-    def _report_s3_comparison(self, user_profile, bucket, s3_path, sync_status_dir, filepaths=False):
-        s3 = S3(user_profile, bucket)
-        client = s3._client()
-        prefix = s3._normalize_prefix(s3_path)
-        local_files = {k: v for k, v in s3._list_local_files('data/').items()
-                       if not k.endswith('.synced')}
-        s3_objects = s3._list_s3_objects(client, prefix)
-        local_keys = set(local_files)
-        s3_keys = set(s3_objects)
-        only_local = sorted(local_keys - s3_keys)
-        only_s3 = sorted(s3_keys - local_keys)
-        changed_local = []
-        changed_s3 = []
-        conflict = []
-        differ = []
-        for rel_path in local_keys & s3_keys:
-            local_path = local_files[rel_path]
-            marker_etag, marker_mtime = self._read_marker(rel_path, sync_status_dir)
-            if marker_etag is None:
-                differ.append(rel_path)
-                continue
-            s3_changed = s3_objects[rel_path].etag != marker_etag
-            local_mtime = datetime.fromtimestamp(os.path.getmtime(local_path), tz=timezone.utc)
-            local_changed = local_mtime > marker_mtime
-            if local_changed and s3_changed:
-                conflict.append(rel_path)
-            elif local_changed:
-                changed_local.append(rel_path)
-            elif s3_changed:
-                changed_s3.append(rel_path)
-            # else: neither side changed since the last sync -> in sync, nothing to report
-        self._log_group("file(s) local but not on S3", only_local, filepaths)
-        self._log_group("file(s) on S3 but not local", only_s3, filepaths)
-        self._log_group("file(s) changed locally since last sync", sorted(changed_local), filepaths)
-        self._log_group("file(s) changed on S3 since last sync", sorted(changed_s3), filepaths)
-        self._log_group("file(s) changed both locally and on S3 (conflict)", sorted(conflict), filepaths)
-        self._log_group("file(s) differing from S3 (no sync record)", sorted(differ), filepaths)
+    def _report_s3_comparison(self, sync_status_dir, filepaths):
+        bucket = self.project_configs['s3_bucket']
+        if bucket == "":
+            self.log.info("No bucket specified in config")
+            return
+        s3 = S3(self.project_configs['aws_user_profile'], bucket)
+        comparison = s3.compare('data/', self.project_configs['s3_path'], sync_status_dir)
+        self._log_group("file(s) local but not on S3", comparison.only_local, filepaths)
+        self._log_group("file(s) on S3 but not local", comparison.only_s3, filepaths)
+        self._log_group("file(s) changed locally since last sync", comparison.changed_local, filepaths)
+        self._log_group("file(s) changed on S3 since last sync", comparison.changed_s3, filepaths)
+        self._log_group("file(s) changed both locally and on S3 (conflict)", comparison.conflict, filepaths)
+        self._log_group("file(s) differing from S3 (no sync record)", comparison.differ, filepaths)
 
-    def _read_marker(self, rel_path, sync_status_dir):
-        """Return the (etag, mtime) recorded in the .synced marker, or (None, None) when there
-        is no usable record (no location configured, no marker, or a legacy/empty marker)."""
-        if not sync_status_dir:
-            return None, None
-        marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
-        if not os.path.exists(marker_path):
-            return None, None
-        with open(marker_path) as f:
-            etag = f.read().strip()
-        if not etag:
-            return None, None
-        mtime = datetime.fromtimestamp(os.path.getmtime(marker_path), tz=timezone.utc)
-        return etag, mtime
+    def _find_unsynced(self, data_dir, markers):
+        # Local-only staleness check against the recorded markers; no S3 round-trips.
+        missing = []
+        stale = []
+        for rel_path, local_path in list_local_files(data_dir).items():
+            _, marker_mtime = markers.read(rel_path)
+            if marker_mtime is None:
+                missing.append(rel_path)
+            elif os.path.getmtime(local_path) > marker_mtime:
+                stale.append(rel_path)
+        return sorted(missing), sorted(stale)
 
     def _log_group(self, label, paths, filepaths):
         self.log.info(f"{len(paths)} {label}")
         if filepaths:
             for path in paths:
                 self.log.info(f"  {path}")
-
-    def _last_push_time(self, sync_status_dir):
-        if not os.path.isdir(sync_status_dir):
-            return None
-        latest = None
-        for root, _, filenames in os.walk(sync_status_dir):
-            for filename in filenames:
-                if filename.endswith('.synced'):
-                    mtime = os.path.getmtime(os.path.join(root, filename))
-                    if latest is None or mtime > latest:
-                        latest = mtime
-        return datetime.fromtimestamp(latest).astimezone() if latest is not None else None
-
-    def _find_unsynced(self, data_dir, sync_status_dir):
-        missing = []
-        stale = []
-        if not os.path.isdir(data_dir):
-            return missing, stale
-        for root, _, filenames in os.walk(data_dir):
-            for filename in filenames:
-                full_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(full_path, data_dir)
-                if rel_path.endswith('.synced'):
-                    continue
-                marker_path = os.path.join(sync_status_dir, rel_path + '.synced')
-                if not os.path.exists(marker_path):
-                    missing.append(rel_path)
-                elif os.path.getmtime(full_path) > os.path.getmtime(marker_path):
-                    stale.append(rel_path)
-        return sorted(missing), sorted(stale)

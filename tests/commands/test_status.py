@@ -278,7 +278,7 @@ def _make_marker(path, etag, mtime=None):
 
 
 def _run_status_all(mocker, local_files, s3_objects, filepaths=False):
-    mocker.patch.object(S3, '_list_local_files', return_value=local_files)
+    mocker.patch('datakit_data.s3.list_local_files', return_value=local_files)
     mocker.patch.object(S3, '_list_s3_objects', return_value=s3_objects)
     mocker.patch.object(S3, '_client', return_value=mock.Mock())
     run_status(scan_all=True, filepaths=filepaths)
@@ -433,13 +433,15 @@ def test_all_mixed(caplog, mocker, fake_project):
 
 
 def test_all_excludes_synced_placeholders(caplog, mocker, fake_project):
-    data_file = os.path.join(fake_project, 'data', 'foo.csv')
-    marker_file = os.path.join(fake_project, 'data', 'foo.csv.synced')
-    _make_file(data_file)
-    _make_file(marker_file)
-    local = {'foo.csv': data_file, 'foo.csv.synced': marker_file}
-    s3_objs = _make_s3_objects(['foo.csv'])
-    _run_status_all(mocker, local, s3_objs)
+    """
+    .synced markers living inside the data dir (sync_status_location = data/) are excluded
+    from the local side of the comparison.
+    """
+    _make_file(os.path.join(fake_project, 'data', 'foo.csv'))
+    _make_file(os.path.join(fake_project, 'data', 'foo.csv.synced'))
+    mocker.patch.object(S3, '_list_s3_objects', return_value=_make_s3_objects(['foo.csv']))
+    mocker.patch.object(S3, '_client', return_value=mock.Mock())
+    run_status(scan_all=True)
     assert '0 file(s) local but not on S3' in caplog.text
 
 
