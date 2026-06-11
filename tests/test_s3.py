@@ -169,6 +169,7 @@ def test_upload_small_file_uses_put_object(mocker, tmpdir):
     assert etag == 'abc123'
     assert mock_client.put_object.call_args.kwargs['Bucket'] == 'foo.org'
     assert mock_client.put_object.call_args.kwargs['Key'] == '2017/fake-project/foo.csv'
+    assert mock_client.put_object.call_args.kwargs['ContentType'] == 'text/csv'
     mock_client.upload_file.assert_not_called()
     mock_client.head_object.assert_not_called()
 
@@ -187,7 +188,9 @@ def test_upload_large_file_uses_multipart_with_head(mocker):
     etag = s3._upload(mock_client, 'data/big.bin', '2017/fake-project/big.bin', need_etag=True)
 
     assert etag == 'multi-2'
-    mock_client.upload_file.assert_called_once_with('data/big.bin', 'foo.org', '2017/fake-project/big.bin')
+    mock_client.upload_file.assert_called_once_with(
+        'data/big.bin', 'foo.org', '2017/fake-project/big.bin', ExtraArgs={'ContentType': 'application/octet-stream'}
+    )
     mock_client.head_object.assert_called_once_with(Bucket='foo.org', Key='2017/fake-project/big.bin')
     mock_client.put_object.assert_not_called()
 
@@ -205,7 +208,9 @@ def test_upload_large_file_skips_head_when_etag_not_needed(mocker):
     etag = s3._upload(mock_client, 'data/big.bin', '2017/fake-project/big.bin', need_etag=False)
 
     assert etag is None
-    mock_client.upload_file.assert_called_once_with('data/big.bin', 'foo.org', '2017/fake-project/big.bin')
+    mock_client.upload_file.assert_called_once_with(
+        'data/big.bin', 'foo.org', '2017/fake-project/big.bin', ExtraArgs={'ContentType': 'application/octet-stream'}
+    )
     mock_client.head_object.assert_not_called()
 
 

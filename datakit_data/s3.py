@@ -1,5 +1,6 @@
 import os
 import logging
+import mimetypes
 from collections import namedtuple
 from logging import NullHandler
 
@@ -203,11 +204,14 @@ class S3:
         # files go via put_object, whose response carries the ETag, so no extra head_object is
         # needed; larger files keep upload_file's managed multipart transfer and we read the ETag
         # back with head_object only when a sync marker needs it (need_etag), else return None.
+        content_type, _ = mimetypes.guess_type(local_path)
+        if content_type is None:
+            content_type = 'application/octet-stream'
         if os.path.getsize(local_path) < self.MULTIPART_THRESHOLD:
             with open(local_path, 'rb') as body:
-                response = client.put_object(Bucket=self.bucket, Key=key, Body=body)
+                response = client.put_object(Bucket=self.bucket, Key=key, Body=body, ContentType=content_type)
             return self._normalize_etag(response.get('ETag'))
-        client.upload_file(local_path, self.bucket, key)
+        client.upload_file(local_path, self.bucket, key, ExtraArgs={'ContentType': content_type})
         return self._object_etag(client, key) if need_etag else None
 
     def _normalize_prefix(self, s3_path):
