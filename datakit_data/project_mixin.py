@@ -1,11 +1,25 @@
 import os
 
+from datakit import ConfigField
 from datakit.utils import read_json
 
 
 class ProjectMixin:
 
     plugin_slug = 'datakit-data'
+
+    config_spec = [
+        ConfigField('s3_bucket', required=True,
+                    help='S3 bucket name where project data is archived'),
+        ConfigField('aws_user_profile', default='default',
+                    help='AWS credentials profile to use'),
+        ConfigField('sync_status_location', default='.sync_status/',
+                    help='S3 key prefix where sync status is recorded'),
+        ConfigField('s3_path_prefix',
+                    help='Optional prefix prepended to the project S3 path'),
+        ConfigField('s3_path_suffix',
+                    help='Optional suffix appended to the project S3 path'),
+    ]
 
     @property
     def default_configs(self):
