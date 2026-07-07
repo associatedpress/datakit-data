@@ -1,15 +1,13 @@
 Quickstart
 ===========
 
-Install::
+Install the plugin alongside ``datakit-core`` with uv, then configure AWS::
 
-
-  $ pip install datakit-data
+  $ uv tool install datakit-core --with datakit-data
   $ aws configure
 
-If using `uv`, install alongside `datakit-core`::
-
-  $ uv tool install datakit-core --with datakit-data --with ... (other datakit plugins)
+Add more plugins in the same command with additional ``--with`` flags, e.g.
+``--with datakit-project``.
 
 Initialize project for use with S3::
 

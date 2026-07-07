@@ -59,15 +59,24 @@ Get Started!
 
 Ready to contribute? Here's how to set up `datakit-data` for local development.
 
+datakit-data uses uv_ to manage its virtual environment and dependencies.
+Install uv first if you don't have it (see its `installation docs
+<https://docs.astral.sh/uv/getting-started/installation/>`_).
+
 1. Fork the `datakit-data` repo on GitHub.
 2. Clone your fork locally::
 
     $ git clone git@github.com:your_name_here/datakit-data.git
+    $ cd datakit-data/
 
-3. Use `uv` to set up dependencies and activate the virtualenv::
+3. Create the virtual environment and install all dependencies (including the
+   dev tools) from ``uv.lock``, then activate it::
 
     $ uv sync
     $ source .venv/bin/activate
+
+   uv picks a supported interpreter automatically; datakit-data supports
+   Python 3.10 through 3.13.
 
 4. Create a branch for local development::
 
@@ -75,11 +84,12 @@ Ready to contribute? Here's how to set up `datakit-data` for local development.
 
    Now you can make your changes locally.
 
-5. When you're done making changes, check that your changes pass ruff and the full py310-py313 tox matrix::
+5. When you're done making changes, check that your changes pass the linter and
+   the tests. The Makefile wraps the common tasks::
 
-    $ make lint
-    $ make test
-    $ make test-all
+    $ make lint       # uv run ruff check datakit_data tests
+    $ make test       # uv run pytest
+    $ make test-all   # uv run tox across Python 3.10-3.13
 
 6. Commit your changes and push your branch to GitHub::
 
@@ -98,3 +108,7 @@ Before you submit a pull request, check that it meets these guidelines:
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
    feature to the list in README.rst.
+3. The pull request should pass ``make test-all`` across the supported Python
+   versions (3.10 through 3.13).
+
+.. _uv: https://docs.astral.sh/uv/

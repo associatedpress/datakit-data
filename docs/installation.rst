@@ -4,10 +4,19 @@ Installation
 Install the plugin
 ------------------
 
+Install this plugin alongside datakit-core_. The recommended way is with uv_,
+which keeps the ``datakit`` command and its plugins together in one isolated
+environment::
 
-In order to use this plugin with a system-wide install of datakit_::
+  $ uv tool install datakit-core --with datakit-data
 
-  $ pip install datakit-data
+To add ``datakit-data`` to an existing install, re-run the command with the
+plugins you want (uv updates the tool in place)::
+
+  $ uv tool install datakit-core --with datakit-data --with datakit-project
+
+See the datakit-core_ installation docs for more ways to install and combine
+plugins.
 
 
 Configure AWS
@@ -27,9 +36,30 @@ information when prompted::
   updated manually if needed.
 
 
+Set plugin defaults
+-------------------
 
+Plugin-level defaults (such as a default S3 bucket) are managed with the generic
+``datakit config`` command family that ships with datakit-core_. To fill in any
+unset values interactively::
+
+  $ datakit config init datakit-data
+
+You can also set a single value directly, or review what is configured::
+
+  $ datakit config set datakit-data s3_bucket my-data-projects-bucket
+  $ datakit config list datakit-data
+
+These defaults are stored under ``~/.datakit/plugins/datakit-data/config.json``
+and applied to new projects when ``datakit data init`` is run (see :ref:`usage`).
+
+
+
+.. _uv: https://docs.astral.sh/uv/
 .. _`AWS S3`: https://aws.amazon.com/s3/
 .. _`secret keys`: http://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys
 .. _`aws configure`: http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html
 .. _datakit: https://github.com/associatedpress/datakit-core
+.. _datakit-core: https://datakit-core.readthedocs.io/en/latest/
 .. _datakit-data: https://github.com/associatedpress/datakit-data
+.. _datakit-project: https://datakit-project.readthedocs.io/en/latest/
