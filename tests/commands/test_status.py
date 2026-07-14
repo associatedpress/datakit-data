@@ -47,7 +47,8 @@ def test_no_config_file(caplog):
 
 def test_no_sync_status_location_offers_to_add_yes(caplog, fake_project):
     """
-    When sync_status_location is absent and user answers yes, it is added to project config.
+    When sync_status_location is absent and user answers yes, it is added to the project
+    config and the sync status directory is ignored by Git.
     """
     from datakit.utils import read_json
     create_project_config(fake_project, {
@@ -60,6 +61,48 @@ def test_no_sync_status_location_offers_to_add_yes(caplog, fake_project):
     assert 'No sync_status_location configured' in caplog.text
     config_path = os.path.join(fake_project, 'config', 'datakit-data.json')
     assert read_json(config_path)['sync_status_location'] == '.sync_status/'
+    with open(os.path.join(fake_project, '.gitignore')) as gitignore:
+        assert gitignore.read() == '.sync_status/\n'
+
+
+def test_adding_sync_status_preserves_existing_gitignore(fake_project):
+    """
+    Adding sync_status_location appends to an existing .gitignore without altering its entries.
+    """
+    create_project_config(fake_project, {
+        's3_bucket': 'foo.org',
+        's3_path': '2017/fake-project',
+        'aws_user_profile': 'ap',
+    })
+    gitignore_path = os.path.join(fake_project, '.gitignore')
+    with open(gitignore_path, 'w') as gitignore:
+        gitignore.write('data/')
+
+    with mock.patch('builtins.input', return_value='y'):
+        run_status()
+
+    with open(gitignore_path) as gitignore:
+        assert gitignore.read() == 'data/\n.sync_status/\n'
+
+
+def test_adding_sync_status_does_not_duplicate_gitignore_entry(fake_project):
+    """
+    Adding sync_status_location leaves an existing sync status ignore entry unchanged.
+    """
+    create_project_config(fake_project, {
+        's3_bucket': 'foo.org',
+        's3_path': '2017/fake-project',
+        'aws_user_profile': 'ap',
+    })
+    gitignore_path = os.path.join(fake_project, '.gitignore')
+    with open(gitignore_path, 'w') as gitignore:
+        gitignore.write('.sync_status/\n')
+
+    with mock.patch('builtins.input', return_value='y'):
+        run_status()
+
+    with open(gitignore_path) as gitignore:
+        assert gitignore.read() == '.sync_status/\n'
 
 
 def test_no_sync_status_location_offers_to_add_no(caplog, fake_project):
@@ -78,6 +121,7 @@ def test_no_sync_status_location_offers_to_add_no(caplog, fake_project):
     assert 'No sync_status_location configured' in caplog.text
     config_path = os.path.join(fake_project, 'config', 'datakit-data.json')
     assert 'sync_status_location' not in read_json(config_path)
+    assert not os.path.exists(os.path.join(fake_project, '.gitignore'))
 
 
 def test_no_data_dir(caplog):

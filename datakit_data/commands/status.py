@@ -8,6 +8,7 @@ from ..project_mixin import ProjectMixin
 from ..s3 import S3, list_local_files
 from ..sync_markers import SyncMarkers
 
+
 class Status(ProjectMixin, CommandHelpers, Command):
 
     "Show sync status of local data files"
@@ -50,12 +51,35 @@ class Status(ProjectMixin, CommandHelpers, Command):
                 configs = read_json(self.project_config_path)
                 configs['sync_status_location'] = '.sync_status/'
                 write_json(self.project_config_path, configs)
+                self._add_to_gitignore('.sync_status/')
                 self.log.info("Added sync_status_location to config/datakit-data.json")
             return
         missing, stale = self._find_unsynced('data/', markers)
 
         self._log_group("file(s) missing a .synced file", missing, parsed_args.filepaths)
         self._log_group("file(s) modified since last sync", stale, parsed_args.filepaths)
+
+    def _add_to_gitignore(self, directory):
+        gitignore_path = '.gitignore'
+        try:
+            with open(gitignore_path, encoding='utf-8') as gitignore:
+                contents = gitignore.read()
+        except FileNotFoundError:
+            contents = ''
+
+        entry = f"{directory.rstrip('/')}/"
+        existing_entries = {
+            line.strip().rstrip('/')
+            for line in contents.splitlines()
+            if line.strip() and not line.lstrip().startswith('#')
+        }
+        if entry.rstrip('/') in existing_entries:
+            return
+
+        with open(gitignore_path, 'a', encoding='utf-8') as gitignore:
+            if contents and not contents.endswith('\n'):
+                gitignore.write('\n')
+            gitignore.write(f'{entry}\n')
 
     def _report_s3_comparison(self, sync_status_dir, filepaths):
         bucket = self.project_configs['s3_bucket']
