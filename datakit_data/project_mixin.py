@@ -1,4 +1,5 @@
 import os
+from typing import ClassVar
 
 from datakit import ConfigField
 from datakit.utils import read_json
@@ -8,7 +9,7 @@ class ProjectMixin:
 
     plugin_slug = 'datakit-data'
 
-    config_spec = [
+    config_spec: ClassVar[list[ConfigField]] = [
         ConfigField('s3_bucket', required=True,
                     help='S3 bucket name where project data is archived'),
         ConfigField('aws_user_profile', default='default',

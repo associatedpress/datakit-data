@@ -1,5 +1,6 @@
 import argparse
 import os
+
 from cliff.command import Command
 from datakit import CommandHelpers
 
@@ -13,7 +14,7 @@ class Pull(ProjectMixin, CommandHelpers, Command):
     "Pull data from S3"
 
     def get_parser(self, prog_name):
-        parser = super(Pull, self).get_parser(prog_name)
+        parser = super().get_parser(prog_name)
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,

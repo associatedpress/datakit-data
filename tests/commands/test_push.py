@@ -2,8 +2,8 @@ import os
 from unittest import mock
 
 import pytest
-
 from conftest import create_project_config
+
 from datakit_data import Push
 
 

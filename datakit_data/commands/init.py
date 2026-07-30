@@ -1,6 +1,6 @@
 import getpass
 import os
-from datetime import date
+from datetime import datetime, timezone
 
 from cliff.command import Command
 from datakit import CommandHelpers
@@ -81,7 +81,7 @@ class Init(ProjectMixin, CommandHelpers, Command):
 
     def _expand_vars(self, configs):
         """Expand dynamic placeholders in string config values in-place."""
-        today = date.today()
+        today = datetime.now(tz=timezone.utc).date()
         subs = {
             '$YEAR': str(today.year),
             '$MONTH': today.strftime('%m'),

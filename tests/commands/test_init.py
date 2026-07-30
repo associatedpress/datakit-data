@@ -1,16 +1,12 @@
 import getpass
 import os
-import pytest
-from datetime import date
+from datetime import datetime, timezone
 from unittest import mock
 
-from conftest import (
-    create_plugin_config,
-    create_project_config,
-    dir_contents
-)
-
+import pytest
+from conftest import create_plugin_config, create_project_config, dir_contents
 from datakit.utils import read_json
+
 from datakit_data import Init
 
 
@@ -158,7 +154,7 @@ def test_dynamic_year_expansion(dkit_home, fake_project):
     parsed_args = mock.Mock()
     with mock.patch('builtins.input', return_value='n'):
         cmd.run(parsed_args)
-    expected_year = str(date.today().year)
+    expected_year = str(datetime.now(tz=timezone.utc).year)
     assert cmd.project_configs['s3_path'] == f'projects/{expected_year}/fake-project'
 
 
@@ -175,7 +171,7 @@ def test_dynamic_month_day_expansion(dkit_home, fake_project):
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     with mock.patch('builtins.input', return_value='n'):
         cmd.run(mock.Mock())
-    today = date.today()
+    today = datetime.now(tz=timezone.utc).date()
     expected_prefix = f"{today.year}/{today.strftime('%m')}/{today.strftime('%d')}"
     assert cmd.project_configs['s3_path'] == f'{expected_prefix}/fake-project'
 

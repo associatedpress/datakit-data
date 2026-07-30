@@ -1,6 +1,6 @@
-import os
 import logging
 import mimetypes
+import os
 from collections import namedtuple
 from logging import NullHandler
 
@@ -8,7 +8,6 @@ import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
 from .sync_markers import SyncMarkers
-
 
 logger = logging.getLogger(__name__)
 logger.addHandler(NullHandler())

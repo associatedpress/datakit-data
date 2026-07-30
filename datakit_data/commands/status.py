@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+
 from cliff.command import Command
 from datakit import CommandHelpers
 from datakit.utils import read_json, write_json
@@ -14,7 +15,7 @@ class Status(ProjectMixin, CommandHelpers, Command):
     "Show sync status of local data files"
 
     def get_parser(self, prog_name):
-        parser = super(Status, self).get_parser(prog_name)
+        parser = super().get_parser(prog_name)
         parser.add_argument(
             '--filepaths',
             action='store_true',

@@ -4,8 +4,8 @@ from datetime import datetime
 from unittest import mock
 
 import pytest
-
 from conftest import create_project_config
+
 from datakit_data import Status
 from datakit_data.s3 import S3, S3ObjectInfo
 
@@ -32,7 +32,7 @@ def run_status(filepaths=False, scan_all=False):
     cmd = Status(mock.Mock(), None, 'data status')
     parsed_args = mock.Mock()
     parsed_args.filepaths = filepaths
-    setattr(parsed_args, 'all', scan_all)
+    parsed_args.all = scan_all
     cmd.run(parsed_args)
 
 
@@ -249,7 +249,7 @@ def test_get_parser():
     assert hasattr(args, 'filepaths')
     assert args.filepaths is False
     assert hasattr(args, 'all')
-    assert getattr(args, 'all') is False
+    assert args.all is False
 
 
 def test_filepaths_missing(caplog, fake_project):
@@ -295,7 +295,7 @@ def test_filepaths_nested_path(caplog, fake_project):
     """
     _make_file(os.path.join(fake_project, 'data', 'subdir', 'report.csv'))
     run_status(filepaths=True)
-    assert '  subdir/report.csv' in caplog.text or '  subdir{}report.csv'.format(os.sep) in caplog.text
+    assert '  subdir/report.csv' in caplog.text or f'  subdir{os.sep}report.csv' in caplog.text
 
 
 # ---------------------------------------------------------------------------

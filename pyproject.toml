@@ -31,7 +31,7 @@ dev = [
     "bumpversion",
     "coverage",
     "cryptography>=42.0.4",
-    "ruff",
+    "ruff==0.16.0",
     "pytest",
     "pytest-mock",
     "Sphinx",

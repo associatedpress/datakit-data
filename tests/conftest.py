@@ -1,4 +1,5 @@
 import os
+
 import pytest
 from datakit.utils import mkdir_p, write_json
 
@@ -29,7 +30,9 @@ def create_plugin_config(dkit_home, project_name, content):
     return content
 
 
-def create_project_config(project_root, contents={}):
+def create_project_config(project_root, contents=None):
+    if contents is None:
+        contents = {}
     config_dir = os.path.join(project_root, 'config')
     mkdir_p(config_dir)
     project_config = os.path.join(config_dir, 'datakit-data.json')

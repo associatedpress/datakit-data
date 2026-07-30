@@ -1,8 +1,8 @@
 import argparse
 import os
+
 from cliff.command import Command
 from datakit import CommandHelpers
-
 from datakit.utils import write_json
 
 from ..extra_flags import ExtraFlags
@@ -15,7 +15,7 @@ class Push(ProjectMixin, CommandHelpers, Command):
     "Push local data to S3"
 
     def get_parser(self, prog_name):
-        parser = super(Push, self).get_parser(prog_name)
+        parser = super().get_parser(prog_name)
         parser.add_argument(
             'args',
             nargs=argparse.REMAINDER,

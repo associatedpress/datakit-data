@@ -5,7 +5,7 @@ class ExtraFlags:
 
     @staticmethod
     def _normalize(flag):
-        return flag[2:] if flag.startswith('--') else flag
+        return flag.removeprefix('--')
 
     @classmethod
     def convert(kls, raw_flags):
