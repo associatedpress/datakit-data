@@ -45,3 +45,28 @@ class ProjectMixin:
     @property
     def project_config_path(self):
         return os.path.join('config', 'datakit-data.json')
+
+    def _add_to_gitignore(self, directory):
+        if not directory:
+            return
+
+        gitignore_path = '.gitignore'
+        try:
+            with open(gitignore_path, encoding='utf-8') as gitignore:
+                contents = gitignore.read()
+        except FileNotFoundError:
+            contents = ''
+
+        entry = f"{directory.rstrip('/')}/"
+        existing_entries = {
+            line.strip().rstrip('/')
+            for line in contents.splitlines()
+            if line.strip() and not line.lstrip().startswith('#')
+        }
+        if entry.rstrip('/') in existing_entries:
+            return
+
+        with open(gitignore_path, 'a', encoding='utf-8') as gitignore:
+            if contents and not contents.endswith('\n'):
+                gitignore.write('\n')
+            gitignore.write(f'{entry}\n')

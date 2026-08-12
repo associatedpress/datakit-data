@@ -41,6 +41,10 @@ The `data init` command creates:
       "sync_status_location": ".sync_status/"
     }
 
+* `.gitignore` - the configured `sync_status_location` is added if it is not already ignored.
+  This keeps sync marker files out of version control without requiring a separate
+  `datakit data status` command.
+
 
 .. note::
 
@@ -82,7 +86,8 @@ Default configurations
 As a convenience, `datakit-data` provides the ability to pre-configure default settings for
 AWS integration. This feature helps speed up S3 integration for new projects.
 
-Default values for the `aws_user_profile` and `s3_bucket` settings mentioned in :ref:`usage-configure` can be placed
+Default values for the `aws_user_profile`, `s3_bucket`, and `sync_status_location` settings mentioned in
+:ref:`usage-configure` can be placed
 in **~/.datakit/plugins/datakit-data/config.json**. These configurations will then be applied
 to all projects when `datakit data init` is run.
 

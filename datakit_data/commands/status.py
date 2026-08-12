@@ -60,28 +60,6 @@ class Status(ProjectMixin, CommandHelpers, Command):
         self._log_group("file(s) missing a .synced file", missing, parsed_args.filepaths)
         self._log_group("file(s) modified since last sync", stale, parsed_args.filepaths)
 
-    def _add_to_gitignore(self, directory):
-        gitignore_path = '.gitignore'
-        try:
-            with open(gitignore_path, encoding='utf-8') as gitignore:
-                contents = gitignore.read()
-        except FileNotFoundError:
-            contents = ''
-
-        entry = f"{directory.rstrip('/')}/"
-        existing_entries = {
-            line.strip().rstrip('/')
-            for line in contents.splitlines()
-            if line.strip() and not line.lstrip().startswith('#')
-        }
-        if entry.rstrip('/') in existing_entries:
-            return
-
-        with open(gitignore_path, 'a', encoding='utf-8') as gitignore:
-            if contents and not contents.endswith('\n'):
-                gitignore.write('\n')
-            gitignore.write(f'{entry}\n')
-
     def _report_s3_comparison(self, sync_status_dir, filepaths):
         bucket = self.project_configs['s3_bucket']
         if bucket == "":

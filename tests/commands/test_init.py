@@ -32,6 +32,8 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert project_configs['s3_bucket'] == 'test-bucket'
     assert project_configs['s3_path'] == 'fake-project'
     assert project_configs['sync_status_location'] == '.sync_status/'
+    with open(os.path.join(fake_project, '.gitignore')) as gitignore:
+        assert gitignore.read() == '.sync_status/\n'
 
 
 def test_creates_plugin_config_via_prompts(dkit_home, fake_project):
@@ -283,3 +285,62 @@ def test_no_prompt_when_sync_status_location_already_in_system_config(dkit_home,
     cmd = Init(mock.Mock(), None, cmd_name='data init')
     with mock.patch('builtins.input', side_effect=AssertionError("input should not be called")):
         cmd.run(mock.Mock())
+
+
+def test_sync_status_uses_system_config_location(dkit_home, fake_project):
+    """
+    Init configures sync status tracking at the system-configured location and ignores it in Git.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+        'sync_status_location': '.datakit-sync/',
+    })
+    gitignore_path = os.path.join(fake_project, '.gitignore')
+    with open(gitignore_path, 'w') as gitignore:
+        gitignore.write('coverage/')
+
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', side_effect=AssertionError("input should not be called")):
+        cmd.run(mock.Mock())
+
+    assert cmd.project_configs['sync_status_location'] == '.datakit-sync/'
+    with open(gitignore_path) as gitignore:
+        assert gitignore.read() == 'coverage/\n.datakit-sync/\n'
+
+
+def test_sync_status_in_data_ignores_data_directory(dkit_home, fake_project):
+    """
+    A system setting that stores sync markers beside data files causes data/ to be ignored.
+    """
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+        'sync_status_location': 'data/',
+    })
+
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', side_effect=AssertionError("input should not be called")):
+        cmd.run(mock.Mock())
+
+    with open(os.path.join(fake_project, '.gitignore')) as gitignore:
+        assert gitignore.read() == 'data/\n'
+
+
+def test_sync_status_ignore_is_not_duplicated(dkit_home, fake_project):
+    """Init leaves an existing ignore entry for the configured sync status location unchanged."""
+    create_plugin_config(dkit_home, 'datakit-data', {
+        's3_bucket': 'data.ap.org',
+        'aws_user_profile': 'ap',
+        'sync_status_location': '.sync_status/',
+    })
+    gitignore_path = os.path.join(fake_project, '.gitignore')
+    with open(gitignore_path, 'w') as gitignore:
+        gitignore.write('.sync_status/\n')
+
+    cmd = Init(mock.Mock(), None, cmd_name='data init')
+    with mock.patch('builtins.input', side_effect=AssertionError("input should not be called")):
+        cmd.run(mock.Mock())
+
+    with open(gitignore_path) as gitignore:
+        assert gitignore.read() == '.sync_status/\n'
