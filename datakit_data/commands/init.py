@@ -32,6 +32,7 @@ class Init(ProjectMixin, CommandHelpers, Command):
             self.log.info("Created config/datakit-data.json")
             sync_status_dir = self.project_configs.get('sync_status_location')
             if sync_status_dir:
+                mkdir_p(sync_status_dir)
                 self._add_to_gitignore(sync_status_dir)
                 self.log.info(f"Configured sync status tracking in {sync_status_dir}")
         else:

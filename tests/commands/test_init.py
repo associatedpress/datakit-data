@@ -32,6 +32,7 @@ def test_project_buildout(caplog, fake_project, monkeypatch, tmpdir):
     assert project_configs['s3_bucket'] == 'test-bucket'
     assert project_configs['s3_path'] == 'fake-project'
     assert project_configs['sync_status_location'] == '.sync_status/'
+    assert os.path.isdir(os.path.join(fake_project, '.sync_status'))
     with open(os.path.join(fake_project, '.gitignore')) as gitignore:
         assert gitignore.read() == '.sync_status/\n'
 
@@ -305,6 +306,7 @@ def test_sync_status_uses_system_config_location(dkit_home, fake_project):
         cmd.run(mock.Mock())
 
     assert cmd.project_configs['sync_status_location'] == '.datakit-sync/'
+    assert os.path.isdir(os.path.join(fake_project, '.datakit-sync'))
     with open(gitignore_path) as gitignore:
         assert gitignore.read() == 'coverage/\n.datakit-sync/\n'
 

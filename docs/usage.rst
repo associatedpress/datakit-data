@@ -41,6 +41,8 @@ The `data init` command creates:
       "sync_status_location": ".sync_status/"
     }
 
+* `.sync_status/` (or the configured `sync_status_location`) - a directory where sync marker
+  files are stored.
 * `.gitignore` - the configured `sync_status_location` is added if it is not already ignored.
   This keeps sync marker files out of version control without requiring a separate
   `datakit data status` command.
